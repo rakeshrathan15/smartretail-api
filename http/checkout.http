@@ -1,0 +1,89 @@
+### Cart, checkout and orders from IntelliJ. Run "Register a shop owner" (or log in) first.
+### Dev seed: delivery ₹500, free above ₹5,000, minimum order ₹1,000, coupons SAVE5 and FLAT100.
+
+### Register a shop owner (change the mobile number if it is taken)
+POST http://localhost:8080/api/auth/register
+Content-Type: application/json
+
+{"fullName": "Test Kirana", "phone": "9000000099", "password": "secret123"}
+
+> {% client.global.set("token", response.body.accessToken); client.global.set("userId", response.body.user.id); %}
+
+### Find a product id
+GET http://localhost:8080/api/products/thums-up-750ml-pet
+
+> {% client.global.set("productId", response.body.id); %}
+
+### Price a cart: slab prices, coupon, delivery, minimum order, stock and credit (changes nothing)
+POST http://localhost:8080/api/checkout/quote
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"items": [{"productId": "{{productId}}", "quantity": 10}], "couponCode": "SAVE5"}
+
+### Save a delivery address (the first one becomes the default)
+POST http://localhost:8080/api/me/addresses
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"label": "Shop", "fullName": "Test Kirana", "phone": "9000000099", "addressLine1": "12 Main Road", "city": "Hyderabad", "pincode": "500001"}
+
+> {% client.global.set("addressId", response.body.id); %}
+
+### My addresses
+GET http://localhost:8080/api/me/addresses
+Authorization: Bearer {{token}}
+
+### Place a cash-on-delivery order. expectedTotal = the quote's total; if prices changed you get 409.
+POST http://localhost:8080/api/orders
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"items": [{"productId": "{{productId}}", "quantity": 10}], "couponCode": "SAVE5", "addressId": "{{addressId}}", "paymentMethod": "COD", "expectedTotal": 4091}
+
+### For UPI: upload the screenshot first, then send its reference as paymentScreenshot with paymentMethod "UPI".
+POST http://localhost:8080/api/me/payment-screenshots
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=boundary
+
+--boundary
+Content-Disposition: form-data; name="file"; filename="paid.jpg"
+
+< ./paid.jpg
+--boundary--
+
+### My orders
+GET http://localhost:8080/api/me/orders
+Authorization: Bearer {{token}}
+
+### ---- Admin ----
+
+### Login as admin
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{"identifier": "admin@smartretail.local", "password": "Admin@12345"}
+
+> {% client.global.set("adminToken", response.body.accessToken); %}
+
+### Give the shop owner ₹25,000 credit (0 turns credit off)
+PUT http://localhost:8080/api/admin/shops/credit
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{"userId": "{{userId}}", "shopName": "Test Kirana", "creditLimit": 25000}
+
+### Shops with credit and what they owe
+GET http://localhost:8080/api/admin/shops
+Authorization: Bearer {{adminToken}}
+
+### Coupons
+GET http://localhost:8080/api/admin/coupons
+Authorization: Bearer {{adminToken}}
+
+### Create a coupon (PERCENTAGE or FIXED)
+POST http://localhost:8080/api/admin/coupons
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{"code": "DIWALI10", "description": "10% off, up to ₹1,000", "discountType": "PERCENTAGE", "discountValue": 10, "minOrderValue": 3000, "maxDiscount": 1000, "usageLimit": 200}

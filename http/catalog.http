@@ -1,0 +1,99 @@
+### Try the catalog API from IntelliJ: click ▶ next to a request. Run "Login as admin" first.
+### Uses the dev admin from application-dev.yml.
+
+### Login as admin
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{"identifier": "admin@smartretail.local", "password": "Admin@12345"}
+
+> {% client.global.set("token", response.body.accessToken); %}
+
+### ---- Public (no login) ----
+
+### Categories
+GET http://localhost:8080/api/categories
+
+### Products: filter, search, sort (POPULAR, PRICE_ASC, PRICE_DESC, NEWEST, NAME), paging
+GET http://localhost:8080/api/products?category=colas&sort=PRICE_ASC&page=0&size=20
+
+### Deals only
+GET http://localhost:8080/api/products?deals=true
+
+### Search
+GET http://localhost:8080/api/products?q=mango
+
+### Product detail with price slabs and images
+GET http://localhost:8080/api/products/thums-up-750ml-pet
+
+### Banners and public settings
+GET http://localhost:8080/api/banners
+
+###
+GET http://localhost:8080/api/settings/public
+
+### ---- Admin ----
+
+### Create a category
+POST http://localhost:8080/api/admin/categories
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"name": "Soda", "sortOrder": 6}
+
+> {% client.global.set("categoryId", response.body.id); %}
+
+### Create a product
+POST http://localhost:8080/api/admin/products
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Soda Water 750ml",
+  "categoryId": "{{categoryId}}",
+  "brand": "Kinley",
+  "unitVolumeMl": 750,
+  "unitsPerCase": 12,
+  "price": 300,
+  "originalPrice": 330,
+  "costPrice": 250,
+  "stockQuantity": 40
+}
+
+> {% client.global.set("productId", response.body.product.id); %}
+
+### Set bulk price slabs (replaces all)
+PUT http://localhost:8080/api/admin/products/{{productId}}/slabs
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"slabs": [
+  {"minQty": 10, "maxQty": 24, "pricePerCase": 280},
+  {"minQty": 25, "pricePerCase": 265}
+]}
+
+### Upload a product image (JPG, PNG or WebP, max 5 MB). Change the file path.
+POST http://localhost:8080/api/admin/products/{{productId}}/images
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=boundary
+
+--boundary
+Content-Disposition: form-data; name="file"; filename="photo.jpg"
+
+< ./photo.jpg
+--boundary--
+
+### List all products, including inactive
+GET http://localhost:8080/api/admin/products?q=soda
+Authorization: Bearer {{token}}
+
+### Create a banner
+POST http://localhost:8080/api/admin/banners
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"title": "Summer stock-up", "subtitle": "Extra 5% on 50+ cases", "ctaText": "Shop now", "link": "/shop?deals=1"}
+
+### All banners (admin view)
+GET http://localhost:8080/api/admin/banners
+Authorization: Bearer {{token}}

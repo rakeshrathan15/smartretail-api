@@ -1,0 +1,17 @@
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+out/
+bin/
+*.log
+
+.idea/
+*.iml
+.vscode/
+.DS_Store
+
+.env
+application-local.yml
+
+uploads/
+private-uploads/
