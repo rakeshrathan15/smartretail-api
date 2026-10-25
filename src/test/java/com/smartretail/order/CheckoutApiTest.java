@@ -86,7 +86,14 @@ class CheckoutApiTest {
         quote(items(bisleri, 5), "NOSUCHCODE")
                 .andExpect(jsonPath("$.couponProblem").value("This coupon code is not valid"))
                 .andExpect(jsonPath("$.couponDiscount").value(0.0));
-        mvc.perform(post("/api/checkout/quote").contentType(MediaType.APPLICATION_JSON).content("{\"items\":[]}"))
+        // Visitors who have not signed in see real prices too, but no credit.
+        mvc.perform(post("/api/checkout/quote").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"items\":" + items(thumsUp, 10) + "}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.lines[0].pricePerCase").value(378.0))
+                .andExpect(jsonPath("$.credit").doesNotExist());
+        // Placing an order still needs an account.
+        mvc.perform(post("/api/orders").contentType(MediaType.APPLICATION_JSON).content("{\"items\":[]}"))
                 .andExpect(status().isUnauthorized());
     }
 

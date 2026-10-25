@@ -45,10 +45,13 @@ public class OrderController {
         this.storage = storage;
     }
 
-    /** Prices the cart: slab prices, coupon, delivery, minimum order, stock and credit. Changes nothing. */
+    /**
+     * Prices the cart: slab prices, coupon, delivery, minimum order, stock and credit. Changes nothing.
+     * Works without login too (no credit shown then), so visitors see real prices.
+     */
     @PostMapping("/api/checkout/quote")
     public Quote quote(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody QuoteRequest request) {
-        return checkout.quote(CurrentUser.id(jwt), request.items(), request.couponCode());
+        return checkout.quote(jwt == null ? null : CurrentUser.id(jwt), request.items(), request.couponCode());
     }
 
     @PostMapping("/api/orders")

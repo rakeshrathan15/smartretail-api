@@ -37,6 +37,8 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**", "/actuator/health", "/error").permitAll()
+                        // Pricing a cart changes nothing, so visitors can see real prices before signing up.
+                        .requestMatchers(HttpMethod.POST, "/api/checkout/quote").permitAll()
                         .requestMatchers(HttpMethod.GET,
                                 "/api/products/**", "/api/categories/**", "/api/banners/**",
                                 "/api/settings/public", "/uploads/**").permitAll()

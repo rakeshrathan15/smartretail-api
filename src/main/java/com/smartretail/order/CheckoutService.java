@@ -74,7 +74,7 @@ public class CheckoutService {
         this.storage = storage;
     }
 
-    /** Prices a cart without changing anything. */
+    /** Prices a cart without changing anything. {@code userId} is null for a visitor who has not signed in. */
     @Transactional(readOnly = true)
     public Quote quote(UUID userId, List<CartItem> items, String couponCode) {
         Map<UUID, Integer> merged = CheckoutPricing.mergeItems(items);
@@ -176,7 +176,7 @@ public class CheckoutService {
             }
         }
         Coupon coupon = couponCode == null ? null : coupons.findByCode(couponCode).orElse(null);
-        CreditInfo credit = shops.findFirstByOwnerUserIdOrderByCreatedAtAsc(userId)
+        CreditInfo credit = userId == null ? null : shops.findFirstByOwnerUserIdOrderByCreatedAtAsc(userId)
                 .filter(s -> s.isActive() && s.getCreditLimit().signum() > 0)
                 .map(this::creditOf)
                 .orElse(null);
