@@ -27,12 +27,22 @@ public class StoreSetting {
     protected StoreSetting() {
     }
 
+    StoreSetting(String key, String value, boolean publicSetting) {
+        this.key = key;
+        this.value = value;
+        this.publicSetting = publicSetting;
+    }
+
     public String getKey() {
         return key;
     }
 
     public String getValue() {
         return value;
+    }
+
+    void setValue(String value) {
+        this.value = value;
     }
 
     public boolean isPublicSetting() {

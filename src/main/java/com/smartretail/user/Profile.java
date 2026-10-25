@@ -80,8 +80,57 @@ public class Profile {
         this.phone = phone;
     }
 
+    /** Saves the shop details and marks the profile complete. */
+    public void updateShop(String shopName, String ownerName, String phone, String gstNumber, String address,
+            String city, String state, String pincode, BigDecimal lat, BigDecimal lng, String placeId) {
+        this.shopName = shopName;
+        this.ownerName = ownerName;
+        this.phone = phone;
+        this.gstNumber = gstNumber;
+        this.shopAddress = address;
+        this.shopCity = city;
+        this.shopState = state;
+        this.shopPincode = pincode;
+        this.shopLat = lat;
+        this.shopLng = lng;
+        this.shopPlaceId = placeId;
+        this.shopProfileComplete = true;
+    }
+
     public UUID getUserId() {
         return userId;
+    }
+
+    public String getOwnerName() {
+        return ownerName;
+    }
+
+    public String getGstNumber() {
+        return gstNumber;
+    }
+
+    public String getShopAddress() {
+        return shopAddress;
+    }
+
+    public String getShopCity() {
+        return shopCity;
+    }
+
+    public String getShopState() {
+        return shopState;
+    }
+
+    public String getShopPincode() {
+        return shopPincode;
+    }
+
+    public BigDecimal getShopLat() {
+        return shopLat;
+    }
+
+    public BigDecimal getShopLng() {
+        return shopLng;
     }
 
     public String getFullName() {

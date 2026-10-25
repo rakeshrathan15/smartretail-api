@@ -95,6 +95,14 @@ takes the stock, redeems the coupon atomically and, for credit, locks the shop a
 `outstanding + total ≤ credit_limit`. Payment: COD → `PENDING`; UPI → `PENDING_VERIFICATION` until an admin
 checks the screenshot; CREDIT → `payment_terms = CREDIT`. Order numbers are `SR` + a database sequence.
 
+## Settings and shop profile
+
+| Method | Path | Notes |
+|---|---|---|
+| GET · PUT | `/api/admin/settings` | Admin only. Store open/closed, delivery charge, free delivery above, minimum order, UPI ID, store contact details, GSTIN, FSSAI, show certifications. Checkout uses the new values at once |
+| GET | `/api/settings/public` | Public settings for the app and website (store open, charges, contact, certifications) |
+| GET · PUT | `/api/me/shop-profile` | The shop owner's shop name, owner, mobile, GSTIN, address and map pin (lat/lng must be in India). Saving marks the profile complete and adds a default "Shop" delivery address if there is none |
+
 ## Layout
 
 ```
