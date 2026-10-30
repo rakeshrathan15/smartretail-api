@@ -143,7 +143,6 @@ checks the screenshot; CREDIT → `payment_terms = CREDIT`. Order numbers are `S
 - **Errors**: unexpected failures are logged and return a plain message without internal details; a database rule refusing a change returns 409.
 - **Login**: 10 wrong passwords for one account blocks it for 15 minutes (`LoginAttempts`). The count is kept in memory, so move it to a shared store before running more than one server.
 - **Operations**: graceful shutdown; `/actuator/health/liveness` and `/readiness` for the hosting platform.
-- **CI**: `.github/workflows/ci.yml` runs the build and all tests on every push.
 
 ## Stores, delivery routes, customers and pick-lists
 
