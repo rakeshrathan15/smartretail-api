@@ -259,6 +259,16 @@ public class Product {
         this.stockQuantity = stockQuantity;
     }
 
+    /** Cases arrived from a supplier. The latest buying price becomes the product's cost. */
+    public void receiveStock(int cases, BigDecimal unitCost) {
+        this.stockQuantity += cases;
+        this.costPrice = unitCost;
+    }
+
+    public void adjustStock(int delta) {
+        this.stockQuantity += delta;
+    }
+
     public int getLowStockThreshold() {
         return lowStockThreshold;
     }

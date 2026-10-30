@@ -121,6 +121,30 @@ checks the screenshot; CREDIT → `payment_terms = CREDIT`. Order numbers are `S
 - **Turned-off shops** cannot order on credit but can still pay.
 - **Routes**: a shop with an account takes its route from its map pin (400 if a different one is sent); a shop added by hand has its route chosen.
 
+## Suppliers, stock and expenses
+
+| Method | Path | What it does |
+|---|---|---|
+| GET · POST · PUT · PATCH | `/api/admin/suppliers`, `/{id}`, `/{id}/active` | Suppliers; turned off rather than deleted |
+| GET | `/api/admin/inventory?q=&level=ALL\|LOW\|OUT`, `/summary` | Stock, cost, sell price and value per product; low and out-of-stock counts, stock value, potential profit |
+| GET · POST | `/api/admin/inventory/receipts`, `/receipts/{id}` | Stock arriving from a supplier |
+| GET · POST | `/api/admin/inventory/adjustments` | Manual stock changes with a reason, and their history |
+| GET · POST · PUT · DELETE | `/api/admin/expenses?from=&to=&category=`, `/summary` | Expenses, with totals by category |
+
+- **Stock only changes with a record**: a receipt, an adjustment, an order or a cancellation. Editing a product no longer changes its stock; the number entered when it is created is its opening stock.
+- **Receipts are all or nothing and never edited.** They lock their products in a fixed order, raise the stock and set the product's cost to the latest buying price. To correct one, make an adjustment.
+- **The same bill cannot be entered twice** for one supplier (checked by the service and a database index).
+- **Stock cannot go below zero** (checked by the service and a database rule).
+- **Potential profit** leaves out products with no cost entered.
+
+## Production safeguards
+
+- **Layers**: controllers only handle HTTP, services hold the rules and transactions, and `*Directory` classes are read-only SQL views for admin screens.
+- **Errors**: unexpected failures are logged and return a plain message without internal details; a database rule refusing a change returns 409.
+- **Login**: 10 wrong passwords for one account blocks it for 15 minutes (`LoginAttempts`). The count is kept in memory, so move it to a shared store before running more than one server.
+- **Operations**: graceful shutdown; `/actuator/health/liveness` and `/readiness` for the hosting platform.
+- **CI**: `.github/workflows/ci.yml` runs the build and all tests on every push.
+
 ## Stores, delivery routes, customers and pick-lists
 
 | Method | Path | Notes |

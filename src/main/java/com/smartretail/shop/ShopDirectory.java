@@ -2,13 +2,13 @@ package com.smartretail.shop;
 
 import com.smartretail.catalog.CatalogDtos.PageResponse;
 import com.smartretail.common.ApiException;
+import com.smartretail.common.SearchTerms;
 import com.smartretail.shop.ShopDtos.ShopRow;
 import com.smartretail.shop.ShopDtos.ShopSummary;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -49,11 +49,11 @@ public class ShopDirectory {
         Map<String, Object> params = new HashMap<>();
         StringBuilder where = new StringBuilder(" WHERE TRUE");
 
-        String term = search == null ? "" : search.trim().toLowerCase(Locale.ROOT).replace("%", "").replace("_", "");
-        if (!term.isEmpty()) {
+        String pattern = SearchTerms.containsPattern(search);
+        if (pattern != null) {
             where.append(" AND (lower(s.name) LIKE :pattern OR coalesce(s.phone, u.phone, '') LIKE :pattern"
                     + " OR lower(coalesce(s.city, '')) LIKE :pattern)");
-            params.put("pattern", "%" + term + "%");
+            params.put("pattern", pattern);
         }
         switch (standing) {
             case ALL -> {
@@ -72,7 +72,7 @@ public class ShopDirectory {
         params.put("offset", (long) page * size);
         List<ShopRow> rows = jdbc.sql(SELECT + where + " ORDER BY lower(s.name), s.id LIMIT :limit OFFSET :offset")
                 .params(params).query((rs, i) -> toRow(rs)).list();
-        return new PageResponse<>(rows, page, size, total, (int) Math.ceil(total / (double) size));
+        return PageResponse.of(rows, page, size, total);
     }
 
     public ShopRow get(UUID id) {

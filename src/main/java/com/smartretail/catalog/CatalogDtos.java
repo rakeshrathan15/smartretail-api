@@ -20,6 +20,10 @@ public final class CatalogDtos {
     // ---- Responses -------------------------------------------------------
 
     public record PageResponse<T>(List<T> items, int page, int size, long totalItems, int totalPages) {
+
+        public static <T> PageResponse<T> of(List<T> items, int page, int size, long totalItems) {
+            return new PageResponse<>(items, page, size, totalItems, (int) Math.ceil(totalItems / (double) size));
+        }
     }
 
     public record CategoryResponse(UUID id, String name, String slug, String imageUrl, boolean active, int sortOrder) {

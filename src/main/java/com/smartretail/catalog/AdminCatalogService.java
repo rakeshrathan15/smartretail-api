@@ -123,6 +123,7 @@ public class AdminCatalogService {
         String name = request.name().trim();
         Product product = new Product(name, Slugs.unique(name, products::existsBySlug), request.price());
         applyProduct(product, request);
+        product.setStockQuantity(Objects.requireNonNullElse(request.stockQuantity(), 0));
         return mapper.toAdmin(products.save(product));
     }
 
@@ -158,7 +159,6 @@ public class AdminCatalogService {
         product.setPrice(r.price());
         product.setOriginalPrice(r.originalPrice());
         product.setCostPrice(r.costPrice());
-        product.setStockQuantity(Objects.requireNonNullElse(r.stockQuantity(), product.getStockQuantity()));
         product.setLowStockThreshold(Objects.requireNonNullElse(r.lowStockThreshold(), product.getLowStockThreshold()));
         product.setBarcode(blankToNull(r.barcode()));
         product.setBadge(blankToNull(r.badge()));
