@@ -12,6 +12,7 @@ import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -134,6 +135,7 @@ public final class OrderDtos {
             AddressSnapshot address,
             String notes,
             Instant createdAt,
+            LocalDate deliveryDate,
             List<OrderItemResponse> items) {
     }
 }

@@ -22,7 +22,7 @@ class OrderMapper {
                 : json.readValue(o.getShippingAddress(), AddressSnapshot.class);
         return new OrderDetail(o.getId(), o.getOrderNumber(), o.getStatus(), o.getPaymentMethod(), o.getPaymentStatus(),
                 o.getPaymentTerms(), o.getSubtotal(), o.getCouponCode(), o.getDiscount(), o.getShippingCharge(),
-                o.getTotal(), o.getTotalCases(), address, o.getNotes(), o.getCreatedAt(),
+                o.getTotal(), o.getTotalCases(), address, o.getNotes(), o.getCreatedAt(), o.getDeliveryDate(),
                 o.getItems().stream().map(OrderItemResponse::from).toList());
     }
 }

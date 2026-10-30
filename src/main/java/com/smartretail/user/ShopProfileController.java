@@ -17,6 +17,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Locale;
 import java.util.UUID;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,7 +29,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * The signed-in shop owner's shop details and map location, asked for after sign-up.
- * The location is what delivery routes will use to place the shop on a route.
+ * Saving publishes {@link ShopLocationChanged}, which places the shop on a delivery route.
  */
 @RestController
 @RequestMapping("/api/me/shop-profile")
@@ -65,11 +66,14 @@ public class ShopProfileController {
     private final ProfileRepository profiles;
     private final AddressRepository addresses;
     private final ShopRepository shops;
+    private final ApplicationEventPublisher events;
 
-    public ShopProfileController(ProfileRepository profiles, AddressRepository addresses, ShopRepository shops) {
+    public ShopProfileController(ProfileRepository profiles, AddressRepository addresses, ShopRepository shops,
+            ApplicationEventPublisher events) {
         this.profiles = profiles;
         this.addresses = addresses;
         this.shops = shops;
+        this.events = events;
     }
 
     @GetMapping
@@ -105,6 +109,7 @@ public class ShopProfileController {
             shop.setName(r.shopName().trim());
             shop.setPhone(phone);
         });
+        events.publishEvent(new ShopLocationChanged(userId));
         return ShopProfileResponse.from(profile);
     }
 

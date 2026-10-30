@@ -17,6 +17,7 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -100,6 +101,10 @@ public class Order {
     @Column(name = "delivery_route_id")
     private UUID deliveryRouteId;
 
+    /** The day the order goes out on its route's van; pick-lists are made per route and date. */
+    @Column(name = "delivery_date")
+    private LocalDate deliveryDate;
+
     private String notes;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -149,6 +154,14 @@ public class Order {
         this.customerName = customerName;
         this.customerPhone = customerPhone;
         this.deliveryRouteId = deliveryRouteId;
+    }
+
+    void setDeliveryDate(LocalDate deliveryDate) {
+        this.deliveryDate = deliveryDate;
+    }
+
+    public LocalDate getDeliveryDate() {
+        return deliveryDate;
     }
 
     void setShippingAddress(String shippingAddressJson) {

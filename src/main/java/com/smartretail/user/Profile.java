@@ -152,4 +152,9 @@ public class Profile {
     public UUID getDeliveryRouteId() {
         return deliveryRouteId;
     }
+
+    /** Set by route assignment from the shop's map pin; null when no route covers it. */
+    public void assignDeliveryRoute(UUID routeId) {
+        this.deliveryRouteId = routeId;
+    }
 }

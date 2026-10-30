@@ -103,6 +103,23 @@ checks the screenshot; CREDIT → `payment_terms = CREDIT`. Order numbers are `S
 | GET | `/api/settings/public` | Public settings for the app and website (store open, charges, contact, certifications) |
 | GET · PUT | `/api/me/shop-profile` | The shop owner's shop name, owner, mobile, GSTIN, address and map pin (lat/lng must be in India). Saving marks the profile complete and adds a default "Shop" delivery address if there is none |
 
+## Stores, delivery routes, customers and pick-lists
+
+| Method | Path | Notes |
+|---|---|---|
+| GET/POST/PUT/DELETE | `/api/admin/stores[/{id}]` | Warehouses and branches. A store with routes cannot be deleted. `PATCH .../active` turns one on or off |
+| GET/POST/PUT/DELETE | `/api/admin/routes[/{id}]` | Name, days, store, colour, priority and area (polygon or circle). A route with orders cannot be deleted; turn it off. `PATCH .../active` |
+| GET | `/api/admin/routes/shop-pins` | Every shop's map pin and route, for the routes map |
+| POST | `/api/admin/routes/reassign` | Places every shop again and reports how many landed on a route |
+| GET | `/api/admin/customers` | Paged. `q` searches; `route` is `all`, `unassigned` or a route id |
+| GET | `/api/admin/pick-list?route=&date=` | What to load for a route (or `unassigned`) and delivery date |
+| GET | `/api/me/delivery-route` | The signed-in shop's route and next delivery day |
+
+How it fits together:
+- **Placing shops** (`RouteAssignmentService`): the first active route, by priority then name, whose area contains the shop's pin. It runs when a shop saves its location (`ShopLocationChanged` event, so the profile code does not depend on routes) and after every route change. Plain maths in Java (`DeliveryZone`), so PostGIS is not needed.
+- **Delivery dates** (`DeliveryDays`, `DeliverySchedule`): an order is stamped with the route's next delivery day after today, or the next day when the shop is on no route. Orders keep the route and date they were placed with, even if the shop later moves.
+- **Pick-lists** leave out cancelled and returned orders.
+
 ## Layout
 
 ```

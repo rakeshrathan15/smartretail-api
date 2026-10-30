@@ -14,6 +14,7 @@ import com.smartretail.order.OrderDtos.AddressSnapshot;
 import com.smartretail.order.OrderDtos.CartItem;
 import com.smartretail.order.OrderDtos.CreditInfo;
 import com.smartretail.order.OrderDtos.OrderDetail;
+import com.smartretail.route.DeliverySchedule;
 import com.smartretail.order.OrderDtos.PlaceOrderRequest;
 import com.smartretail.order.OrderDtos.Quote;
 import com.smartretail.order.OrderEnums.Channel;
@@ -56,11 +57,13 @@ public class CheckoutService {
     private final OrderMapper mapper;
     private final JsonMapper json;
     private final StorageService storage;
+    private final DeliverySchedule schedule;
     private final Clock clock = Clock.systemUTC();
 
     public CheckoutService(ProductRepository products, ProductImageRepository images, CouponRepository coupons,
             ShopRepository shops, AddressRepository addresses, ProfileRepository profiles, OrderRepository orders,
-            StoreSettings settings, OrderMapper mapper, JsonMapper json, StorageService storage) {
+            StoreSettings settings, OrderMapper mapper, JsonMapper json, StorageService storage,
+            DeliverySchedule schedule) {
         this.products = products;
         this.images = images;
         this.coupons = coupons;
@@ -72,6 +75,7 @@ public class CheckoutService {
         this.mapper = mapper;
         this.json = json;
         this.storage = storage;
+        this.schedule = schedule;
     }
 
     /** Prices a cart without changing anything. {@code userId} is null for a visitor who has not signed in. */
@@ -158,6 +162,7 @@ public class CheckoutService {
                 shop != null ? shop.getName() : profile == null ? null : profile.getShopName(),
                 address.getFullName(), address.getPhone(),
                 profile == null ? null : profile.getDeliveryRouteId());
+        order.setDeliveryDate(schedule.deliveryDateForOrderPlacedToday(order.getDeliveryRouteId()));
         order.setShippingAddress(json.writeValueAsString(new AddressSnapshot(address.getLabel(), address.getFullName(),
                 address.getPhone(), address.getAddressLine1(), address.getAddressLine2(), address.getCity(),
                 address.getState(), address.getPincode())));

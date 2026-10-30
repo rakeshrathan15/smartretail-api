@@ -29,6 +29,9 @@ public class Shop {
 
     private String phone;
 
+    @Column(name = "delivery_route_id")
+    private UUID deliveryRouteId;
+
     @Column(name = "credit_limit", nullable = false)
     private BigDecimal creditLimit = BigDecimal.ZERO;
 
@@ -73,6 +76,14 @@ public class Shop {
 
     public void setPhone(String phone) {
         this.phone = phone;
+    }
+
+    public UUID getDeliveryRouteId() {
+        return deliveryRouteId;
+    }
+
+    public void assignDeliveryRoute(UUID routeId) {
+        this.deliveryRouteId = routeId;
     }
 
     public BigDecimal getCreditLimit() {

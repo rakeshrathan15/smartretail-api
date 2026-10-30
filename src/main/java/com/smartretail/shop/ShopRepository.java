@@ -7,6 +7,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -20,6 +21,17 @@ public interface ShopRepository extends JpaRepository<Shop, UUID> {
     Optional<Shop> lockById(@Param("id") UUID id);
 
     List<Shop> findAllByOrderByNameAsc();
+
+    List<Shop> findAllByOwnerUserId(UUID ownerUserId);
+
+    /** Credit shops follow their owner's route, which is worked out from the profile's map pin. */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(nativeQuery = true, value = """
+            UPDATE shops s SET delivery_route_id = p.delivery_route_id
+            FROM profiles p
+            WHERE p.user_id = s.owner_user_id AND s.delivery_route_id IS DISTINCT FROM p.delivery_route_id
+            """)
+    int copyRoutesFromProfiles();
 
     /**
      * What the shop owes: credit orders not cancelled or returned, minus repayments received.
