@@ -82,7 +82,8 @@ and sends only product ids and case counts; **every price is worked out on the s
 | GET | `/api/me/orders`, `/api/me/orders/{id}` | Own orders only |
 | GET/POST/PUT/DELETE | `/api/me/addresses[/{id}]` | `makeDefault`; first address is the default |
 | GET/POST/PUT/DELETE | `/api/admin/coupons[/{id}]` | Used coupons can be deactivated, not deleted |
-| GET · PUT | `/api/admin/shops`, `/api/admin/shops/credit` | Credit limit per shop owner; 0 turns credit off |
+| GET · POST | `/api/admin/shops?q=&standing=ALL\|OWING\|OVER_LIMIT&page=&size=` | Shops with what each owes (see credit ledger below); add one by hand |
+| PUT | `/api/admin/shops/credit` | Credit limit per shop owner; 0 turns credit off |
 
 Pricing rules, in order:
 1. Each product pays its bulk slab price for its case count.
@@ -102,6 +103,23 @@ checks the screenshot; CREDIT → `payment_terms = CREDIT`. Order numbers are `S
 | GET · PUT | `/api/admin/settings` | Admin only. Store open/closed, delivery charge, free delivery above, minimum order, UPI ID, store contact details, GSTIN, FSSAI, show certifications. Checkout uses the new values at once |
 | GET | `/api/settings/public` | Public settings for the app and website (store open, charges, contact, certifications) |
 | GET · PUT | `/api/me/shop-profile` | The shop owner's shop name, owner, mobile, GSTIN, address and map pin (lat/lng must be in India). Saving marks the profile complete and adds a default "Shop" delivery address if there is none |
+
+## Credit ledger
+
+| Method | Path | What it does |
+|---|---|---|
+| GET | `/api/admin/shops/summary` | Total and active shops, credit outstanding, shops over limit |
+| PUT · PATCH | `/api/admin/shops/{id}`, `/{id}/active` | Edit a shop; turn it off or on |
+| GET | `/api/admin/shops/{id}/ledger` | The shop, its balance, open credit orders and repayments |
+| POST | `/api/admin/shops/{id}/payments` | Record a repayment (amount, `CASH`/`UPI`/`BANK`/`CHEQUE`, optional reference) |
+| POST | `/api/admin/shops/{id}/payments/{paymentId}/void` | Void a wrong entry or bounced cheque; 409 if already voided |
+
+- **One balance**: the `shop_balances` SQL view is the only definition of what a shop owes: credit orders not cancelled or returned, minus repayments not voided. Checkout and the admin both read it.
+- **Repayments are against the balance**, not a chosen order. The statement shows them clearing the oldest orders first (`CreditAllocation`); nothing is stored on the orders.
+- **Paying too much** is allowed and becomes an advance (a negative balance), which adds to the credit available.
+- **Voiding, not deleting**: a voided repayment stays in the history but leaves the balance.
+- **Turned-off shops** cannot order on credit but can still pay.
+- **Routes**: a shop with an account takes its route from its map pin (400 if a different one is sent); a shop added by hand has its route chosen.
 
 ## Stores, delivery routes, customers and pick-lists
 

@@ -29,6 +29,15 @@ public class Shop {
 
     private String phone;
 
+    private String gstin;
+
+    @Column(name = "address_line1")
+    private String addressLine1;
+
+    private String city;
+
+    private String pincode;
+
     @Column(name = "delivery_route_id")
     private UUID deliveryRouteId;
 
@@ -52,6 +61,15 @@ public class Shop {
     public Shop(UUID ownerUserId, String name) {
         this.ownerUserId = ownerUserId;
         this.name = name;
+    }
+
+    public void updateDetails(String name, String phone, String gstin, String address, String city, String pincode) {
+        this.name = name;
+        this.phone = phone;
+        this.gstin = gstin;
+        this.addressLine1 = address;
+        this.city = city;
+        this.pincode = pincode;
     }
 
     public UUID getId() {

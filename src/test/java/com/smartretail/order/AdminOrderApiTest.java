@@ -202,8 +202,8 @@ class AdminOrderApiTest {
                 .andExpect(status().isOk());
         mvc.perform(get("/api/admin/shops/customers").header("Authorization", admin).param("q", phone))
                 .andExpect(jsonPath("$[0].creditLimit").value(15000.0));
-        mvc.perform(get("/api/admin/shops").header("Authorization", admin))
-                .andExpect(jsonPath("$[?(@.ownerUserId == '" + userId + "')].ownerPhone", contains(phone)));
+        mvc.perform(get("/api/admin/shops").header("Authorization", admin).param("q", phone))
+                .andExpect(jsonPath("$.items[?(@.ownerUserId == '" + userId + "')].phone", contains(phone)));
     }
 
     // ---- helpers ---------------------------------------------------------

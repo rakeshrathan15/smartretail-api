@@ -104,11 +104,9 @@ public class ShopProfileController {
             address.setDefaultAddress(true);
             addresses.save(address);
         }
-        // A shop given credit by the admin keeps its name in step with the profile.
-        shops.findFirstByOwnerUserIdOrderByCreatedAtAsc(userId).ifPresent(shop -> {
-            shop.setName(r.shopName().trim());
-            shop.setPhone(phone);
-        });
+        // A shop given credit by the admin keeps its details in step with the profile.
+        shops.findFirstByOwnerUserIdOrderByCreatedAtAsc(userId).ifPresent(shop -> shop.updateDetails(r.shopName().trim(),
+                phone, gst, r.address().trim(), r.city().trim(), r.pincode()));
         events.publishEvent(new ShopLocationChanged(userId));
         return ShopProfileResponse.from(profile);
     }

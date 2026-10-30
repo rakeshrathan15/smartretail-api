@@ -33,15 +33,10 @@ public interface ShopRepository extends JpaRepository<Shop, UUID> {
             """)
     int copyRoutesFromProfiles();
 
-    /**
-     * What the shop owes: credit orders not cancelled or returned, minus repayments received.
-     * Can be negative if the shop paid in advance.
-     */
-    @Query(nativeQuery = true, value = """
-            SELECT COALESCE((SELECT SUM(o.total) FROM orders o
-                             WHERE o.shop_id = :shopId AND o.payment_terms = 'CREDIT'
-                               AND o.status NOT IN ('CANCELLED', 'RETURNED')), 0)
-                 - COALESCE((SELECT SUM(p.amount) FROM shop_payments p WHERE p.shop_id = :shopId), 0)
-            """)
+    /** What the shop owes (see the shop_balances view). Negative if it paid in advance. */
+    @Query(nativeQuery = true, value = "SELECT outstanding FROM shop_balances WHERE shop_id = :shopId")
     BigDecimal outstanding(@Param("shopId") UUID shopId);
+
+    @Query(nativeQuery = true, value = "SELECT EXISTS (SELECT 1 FROM delivery_routes WHERE id = :routeId)")
+    boolean routeExists(@Param("routeId") UUID routeId);
 }

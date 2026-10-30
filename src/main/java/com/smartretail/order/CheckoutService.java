@@ -120,7 +120,7 @@ public class CheckoutService {
         String screenshot = null;
         switch (method) {
             case CREDIT -> {
-                if (shop == null || shop.getCreditLimit().signum() <= 0) {
+                if (shop == null || !shop.isActive() || shop.getCreditLimit().signum() <= 0) {
                     throw conflict("Credit is not enabled for your shop. Choose another payment method.");
                 }
                 shops.lockById(shop.getId());

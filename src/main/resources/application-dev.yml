@@ -5,6 +5,8 @@ spring:
   flyway:
     # db/seed adds sample categories, products and banners for local testing.
     locations: classpath:db/migration,classpath:db/seed
+    # The seed scripts are V100 and up, so a new V2 arrives "behind" them on an existing dev database.
+    out-of-order: true
 
 app:
   jwt:
