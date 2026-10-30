@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.TreeMap;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,6 +18,13 @@ public class StoreSettings {
 
     public StoreSettings(StoreSettingRepository settings) {
         this.settings = settings;
+    }
+
+    /** Settings the storefront may show: store name, open/closed, delivery charges, contact numbers. */
+    public Map<String, String> publicValues() {
+        Map<String, String> result = new TreeMap<>();
+        settings.findAllByPublicSettingTrue().forEach(s -> result.put(s.getKey(), s.getValue() == null ? "" : s.getValue()));
+        return result;
     }
 
     public record Checkout(boolean storeOpen, BigDecimal deliveryCharge, BigDecimal freeDeliveryAbove,

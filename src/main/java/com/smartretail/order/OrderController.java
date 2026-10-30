@@ -1,7 +1,6 @@
 package com.smartretail.order;
 
 import com.smartretail.catalog.CatalogDtos.PageResponse;
-import com.smartretail.common.ApiException;
 import com.smartretail.order.OrderDtos.OrderDetail;
 import com.smartretail.order.OrderDtos.OrderSummary;
 import com.smartretail.order.OrderDtos.PlaceOrderRequest;
@@ -12,13 +11,10 @@ import com.smartretail.storage.StorageService;
 import jakarta.validation.Valid;
 import java.util.Map;
 import java.util.UUID;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -34,14 +30,12 @@ import org.springframework.web.multipart.MultipartFile;
 public class OrderController {
 
     private final CheckoutService checkout;
-    private final OrderRepository orders;
-    private final OrderMapper mapper;
+    private final MyOrderService myOrders;
     private final StorageService storage;
 
-    public OrderController(CheckoutService checkout, OrderRepository orders, OrderMapper mapper, StorageService storage) {
+    public OrderController(CheckoutService checkout, MyOrderService myOrders, StorageService storage) {
         this.checkout = checkout;
-        this.orders = orders;
-        this.mapper = mapper;
+        this.myOrders = myOrders;
         this.storage = storage;
     }
 
@@ -71,22 +65,13 @@ public class OrderController {
     }
 
     @GetMapping("/api/me/orders")
-    @Transactional(readOnly = true)
     public PageResponse<OrderSummary> myOrders(@AuthenticationPrincipal Jwt jwt,
             @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
-        if (page < 0) {
-            throw ApiException.badRequest("page must be 0 or more");
-        }
-        Page<Order> result = orders.findAllByUserIdOrderByCreatedAtDesc(CurrentUser.id(jwt),
-                PageRequest.of(page, Math.clamp(size, 1, 50)));
-        return new PageResponse<>(result.getContent().stream().map(OrderSummary::from).toList(), result.getNumber(),
-                result.getSize(), result.getTotalElements(), result.getTotalPages());
+        return myOrders.list(CurrentUser.id(jwt), page, size);
     }
 
     @GetMapping("/api/me/orders/{id}")
-    @Transactional(readOnly = true)
     public OrderDetail myOrder(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
-        return orders.findByIdAndUserId(id, CurrentUser.id(jwt)).map(mapper::toDetail)
-                .orElseThrow(() -> ApiException.notFound("Order not found"));
+        return myOrders.get(CurrentUser.id(jwt), id);
     }
 }

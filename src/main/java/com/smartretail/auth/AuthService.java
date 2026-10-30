@@ -29,17 +29,19 @@ public class AuthService {
     private final RefreshTokenRepository refreshTokens;
     private final TokenService tokenService;
     private final PasswordEncoder passwordEncoder;
+    private final LoginAttempts loginAttempts;
     private final Clock clock;
     // Compared against when the account does not exist, so response time does not reveal it.
     private final String dummyHash;
 
     public AuthService(UserRepository users, ProfileRepository profiles, RefreshTokenRepository refreshTokens,
-            TokenService tokenService, PasswordEncoder passwordEncoder) {
+            TokenService tokenService, PasswordEncoder passwordEncoder, LoginAttempts loginAttempts) {
         this.users = users;
         this.profiles = profiles;
         this.refreshTokens = refreshTokens;
         this.tokenService = tokenService;
         this.passwordEncoder = passwordEncoder;
+        this.loginAttempts = loginAttempts;
         this.clock = Clock.systemUTC();
         this.dummyHash = passwordEncoder.encode("not-a-real-password");
     }
@@ -72,14 +74,20 @@ public class AuthService {
     @Transactional
     public AuthResponse login(LoginRequest request) {
         String identifier = request.identifier().trim();
+        loginAttempts.checkAllowed(identifier);
         Optional<User> found = Identifiers.isEmail(identifier)
                 ? users.findByEmail(Identifiers.normalizeEmail(identifier))
                 : findByPhoneQuietly(identifier);
 
         String hash = found.map(User::getPasswordHash).orElse(dummyHash);
         boolean passwordMatches = passwordEncoder.matches(request.password(), hash);
-        User user = found.filter(u -> passwordMatches && u.isEnabled())
-                .orElseThrow(() -> ApiException.unauthorized(INVALID_CREDENTIALS));
+        Optional<User> accepted = found.filter(u -> passwordMatches && u.isEnabled());
+        if (accepted.isEmpty()) {
+            loginAttempts.recordFailure(identifier);
+            throw ApiException.unauthorized(INVALID_CREDENTIALS);
+        }
+        User user = accepted.get();
+        loginAttempts.reset(identifier);
         return issueTokens(user, profiles.findById(user.getId()).orElse(null), clock.instant());
     }
 

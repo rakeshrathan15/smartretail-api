@@ -24,12 +24,18 @@ spring:
 
 server:
   port: ${PORT:8080}
+  # Lets requests in progress finish when the server is stopped for a new release.
+  shutdown: graceful
 
 management:
   endpoints:
     web:
       exposure:
         include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
 
 app:
   jwt:
