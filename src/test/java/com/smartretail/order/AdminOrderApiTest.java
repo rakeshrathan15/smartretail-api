@@ -82,7 +82,8 @@ class AdminOrderApiTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.todayOrders", greaterThanOrEqualTo(1)))
                 .andExpect(jsonPath("$.data.awaitingConfirmation", greaterThanOrEqualTo(1)))
-                .andExpect(jsonPath("$.data.codToCollect", greaterThanOrEqualTo(2900.0)));
+                .andExpect(jsonPath("$.data.codToCollect", greaterThanOrEqualTo(2900.0)))
+                .andExpect(jsonPath("$.data.statusCounts.PLACED", greaterThanOrEqualTo(1)));
 
         mvc.perform(get("/api/admin/orders").header("Authorization", customer)).andExpect(status().isForbidden());
     }

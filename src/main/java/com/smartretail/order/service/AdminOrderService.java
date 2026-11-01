@@ -17,6 +17,7 @@ import com.smartretail.order.enums.OrderEnums.PaymentStatus;
 import com.smartretail.order.enums.OrderEnums.Status;
 import com.smartretail.order.mapper.OrderMapper;
 import com.smartretail.order.repository.OrderRepository;
+import com.smartretail.order.repository.OrderRepository.StatusCount;
 import com.smartretail.order.support.OrderWorkflow;
 import com.smartretail.storage.service.StorageService;
 import jakarta.persistence.criteria.Predicate;
@@ -85,7 +86,9 @@ public class AdminOrderService {
                 orders.revenueSince(startOfToday, CLOSED),
                 orders.countByStatus(Status.PLACED),
                 orders.countByPaymentStatusAndStatusNotIn(PaymentStatus.PENDING_VERIFICATION, CLOSED),
-                orders.sumUnpaid(PaymentMethod.COD, PaymentStatus.PENDING, CLOSED));
+                orders.sumUnpaid(PaymentMethod.COD, PaymentStatus.PENDING, CLOSED),
+                orders.countGroupedByStatus().stream()
+                        .collect(Collectors.toMap(StatusCount::getStatus, StatusCount::getTotal)));
     }
 
     @Transactional(readOnly = true)

@@ -8,6 +8,7 @@ import jakarta.persistence.LockModeType;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
@@ -42,6 +43,9 @@ public interface OrderRepository extends JpaRepository<Order, UUID>, JpaSpecific
 
     long countByStatus(Status status);
 
+    @Query("select o.status as status, count(o) as total from Order o group by o.status")
+    List<StatusCount> countGroupedByStatus();
+
     long countByPaymentStatusAndStatusNotIn(PaymentStatus paymentStatus, Collection<Status> excluded);
 
     @Query("select coalesce(sum(o.total), 0) from Order o where o.createdAt >= :since and o.status not in :excluded")
@@ -51,4 +55,11 @@ public interface OrderRepository extends JpaRepository<Order, UUID>, JpaSpecific
             + "and o.paymentStatus = :paymentStatus and o.status not in :excluded")
     BigDecimal sumUnpaid(@Param("method") PaymentMethod method, @Param("paymentStatus") PaymentStatus paymentStatus,
             @Param("excluded") Collection<Status> excluded);
+
+    /** One row of {@link #countGroupedByStatus()}. */
+    interface StatusCount {
+        Status getStatus();
+
+        long getTotal();
+    }
 }
