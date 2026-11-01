@@ -2,13 +2,14 @@ package com.smartretail.order;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.smartretail.catalog.Product;
-import com.smartretail.coupon.Coupon;
-import com.smartretail.coupon.Coupon.DiscountType;
-import com.smartretail.order.OrderDtos.CartItem;
-import com.smartretail.order.OrderDtos.CreditInfo;
-import com.smartretail.order.OrderDtos.Quote;
-import com.smartretail.settings.StoreSettings;
+import com.smartretail.catalog.entity.Product;
+import com.smartretail.coupon.entity.Coupon.DiscountType;
+import com.smartretail.coupon.entity.Coupon;
+import com.smartretail.order.dto.request.CartItem;
+import com.smartretail.order.dto.response.CreditInfo;
+import com.smartretail.order.dto.response.Quote;
+import com.smartretail.order.support.CheckoutPricing;
+import com.smartretail.settings.service.StoreSettings;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;

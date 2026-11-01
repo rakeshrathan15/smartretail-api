@@ -29,20 +29,20 @@ class AuthFlowTest {
         String email = "Owner" + phone + "@Example.com";
         register("Ravi Kumar", email, "+91 " + phone, "secret123")
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.tokenType").value("Bearer"))
-                .andExpect(jsonPath("$.user.email").value(email.toLowerCase()))
-                .andExpect(jsonPath("$.user.phone").value(phone))
-                .andExpect(jsonPath("$.user.roles[0]").value("CUSTOMER"))
-                .andExpect(jsonPath("$.user.shopProfileComplete").value(false));
+                .andExpect(jsonPath("$.data.tokenType").value("Bearer"))
+                .andExpect(jsonPath("$.data.user.email").value(email.toLowerCase()))
+                .andExpect(jsonPath("$.data.user.phone").value(phone))
+                .andExpect(jsonPath("$.data.user.roles[0]").value("CUSTOMER"))
+                .andExpect(jsonPath("$.data.user.shopProfileComplete").value(false));
 
         String byPhone = login("0" + phone, "secret123").andExpect(status().isOk()).andReturn()
                 .getResponse().getContentAsString();
         login(email.toUpperCase(), "secret123").andExpect(status().isOk());
 
-        mvc.perform(get("/api/me").header("Authorization", bearer(JsonPath.read(byPhone, "$.accessToken"))))
+        mvc.perform(get("/api/me").header("Authorization", bearer(JsonPath.read(byPhone, "$.data.accessToken"))))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.fullName").value("Ravi Kumar"))
-                .andExpect(jsonPath("$.phone").value(phone));
+                .andExpect(jsonPath("$.data.fullName").value("Ravi Kumar"))
+                .andExpect(jsonPath("$.data.phone").value(phone));
     }
 
     @Test
@@ -54,7 +54,7 @@ class AuthFlowTest {
         register("D", null, "12345", "secret123").andExpect(status().isBadRequest());
         register("E", "not-an-email", null, "secret123")
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.errors.email").exists());
+                .andExpect(jsonPath("$.error.details.email").exists());
         register("F", null, uniquePhone(), "short").andExpect(status().isBadRequest());
 
         login(phone, "wrong-password").andExpect(status().isUnauthorized());
@@ -65,10 +65,10 @@ class AuthFlowTest {
     void refreshRotatesTokensAndDetectsReuse() throws Exception {
         String first = register("Rotator", null, uniquePhone(), "secret123").andReturn()
                 .getResponse().getContentAsString();
-        String refresh1 = JsonPath.read(first, "$.refreshToken");
+        String refresh1 = JsonPath.read(first, "$.data.refreshToken");
 
         String second = refresh(refresh1).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
-        String refresh2 = JsonPath.read(second, "$.refreshToken");
+        String refresh2 = JsonPath.read(second, "$.data.refreshToken");
         assertThat(refresh2).isNotEqualTo(refresh1);
 
         // Replaying the used token is treated as theft: it fails and kills the newer token too.
@@ -80,7 +80,7 @@ class AuthFlowTest {
     void logoutRevokesRefreshToken() throws Exception {
         String body = register("Leaver", null, uniquePhone(), "secret123").andReturn()
                 .getResponse().getContentAsString();
-        String refreshToken = JsonPath.read(body, "$.refreshToken");
+        String refreshToken = JsonPath.read(body, "$.data.refreshToken");
 
         mvc.perform(post("/api/auth/logout").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"refreshToken\":\"" + refreshToken + "\"}"))
@@ -94,14 +94,14 @@ class AuthFlowTest {
         mvc.perform(get("/api/me").header("Authorization", "Bearer not.a.jwt")).andExpect(status().isUnauthorized());
 
         String customer = JsonPath.read(register("Cust", null, uniquePhone(), "secret123").andReturn()
-                .getResponse().getContentAsString(), "$.accessToken");
+                .getResponse().getContentAsString(), "$.data.accessToken");
         mvc.perform(get("/api/admin/ping").header("Authorization", bearer(customer))).andExpect(status().isForbidden());
         mvc.perform(get("/api/pos/ping").header("Authorization", bearer(customer))).andExpect(status().isForbidden());
 
         // The dev profile seeds an admin from application-dev.yml.
         String admin = JsonPath.read(login("admin@smartretail.local", "Admin@12345").andExpect(status().isOk())
-                .andExpect(jsonPath("$.user.roles[0]").value("ADMIN"))
-                .andReturn().getResponse().getContentAsString(), "$.accessToken");
+                .andExpect(jsonPath("$.data.user.roles[0]").value("ADMIN"))
+                .andReturn().getResponse().getContentAsString(), "$.data.accessToken");
         // No admin endpoints exist yet, so getting past security means a 404 rather than 403.
         mvc.perform(get("/api/admin/ping").header("Authorization", bearer(admin))).andExpect(status().isNotFound());
     }

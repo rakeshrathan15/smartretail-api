@@ -7,12 +7,12 @@ Content-Type: application/json
 
 {"fullName": "Test Kirana", "phone": "9000000099", "password": "secret123"}
 
-> {% client.global.set("token", response.body.accessToken); client.global.set("userId", response.body.user.id); %}
+> {% client.global.set("token", response.body.data.accessToken); client.global.set("userId", response.body.data.user.id); %}
 
 ### Find a product id
 GET http://localhost:8080/api/products/thums-up-750ml-pet
 
-> {% client.global.set("productId", response.body.id); %}
+> {% client.global.set("productId", response.body.data.id); %}
 
 ### Price a cart: slab prices, coupon, delivery, minimum order, stock and credit (changes nothing)
 POST http://localhost:8080/api/checkout/quote
@@ -28,7 +28,7 @@ Content-Type: application/json
 
 {"label": "Shop", "fullName": "Test Kirana", "phone": "9000000099", "addressLine1": "12 Main Road", "city": "Hyderabad", "pincode": "500001"}
 
-> {% client.global.set("addressId", response.body.id); %}
+> {% client.global.set("addressId", response.body.data.id); %}
 
 ### My addresses
 GET http://localhost:8080/api/me/addresses
@@ -64,7 +64,7 @@ Content-Type: application/json
 
 {"identifier": "admin@smartretail.local", "password": "Admin@12345"}
 
-> {% client.global.set("adminToken", response.body.accessToken); %}
+> {% client.global.set("adminToken", response.body.data.accessToken); %}
 
 ### Give the shop owner ₹25,000 credit (0 turns credit off)
 PUT http://localhost:8080/api/admin/shops/credit

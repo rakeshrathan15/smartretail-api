@@ -27,11 +27,21 @@ server:
   # Lets requests in progress finish when the server is stopped for a new release.
   shutdown: graceful
 
+logging:
+  structured:
+    format:
+      # One JSON object per line, for Logstash or any log platform. Dev turns this off.
+      console: logstash
+
 management:
+  tracing:
+    sampling:
+      # Every request gets a trace id in the logs. Lower this when a tracing backend is added.
+      probability: 1.0
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,metrics
   endpoint:
     health:
       probes:

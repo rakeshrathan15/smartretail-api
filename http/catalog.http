@@ -7,7 +7,7 @@ Content-Type: application/json
 
 {"identifier": "admin@smartretail.local", "password": "Admin@12345"}
 
-> {% client.global.set("token", response.body.accessToken); %}
+> {% client.global.set("token", response.body.data.accessToken); %}
 
 ### ---- Public (no login) ----
 
@@ -41,7 +41,7 @@ Content-Type: application/json
 
 {"name": "Soda", "sortOrder": 6}
 
-> {% client.global.set("categoryId", response.body.id); %}
+> {% client.global.set("categoryId", response.body.data.id); %}
 
 ### Create a product
 POST http://localhost:8080/api/admin/products
@@ -60,7 +60,7 @@ Content-Type: application/json
   "stockQuantity": 40
 }
 
-> {% client.global.set("productId", response.body.product.id); %}
+> {% client.global.set("productId", response.body.data.product.id); %}
 
 ### Set bulk price slabs (replaces all)
 PUT http://localhost:8080/api/admin/products/{{productId}}/slabs

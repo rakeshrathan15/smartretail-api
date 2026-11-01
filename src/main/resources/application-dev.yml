@@ -16,3 +16,9 @@ app:
   bootstrap-admin:
     email: ${BOOTSTRAP_ADMIN_EMAIL:admin@smartretail.local}
     password: ${BOOTSTRAP_ADMIN_PASSWORD:Admin@12345}
+
+logging:
+  structured:
+    format:
+      # Plain, readable lines on your machine.
+      console: ""

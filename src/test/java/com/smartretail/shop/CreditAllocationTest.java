@@ -2,6 +2,7 @@ package com.smartretail.shop;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.smartretail.shop.support.CreditAllocation;
 import java.math.BigDecimal;
 import java.util.List;
 import org.junit.jupiter.api.Test;

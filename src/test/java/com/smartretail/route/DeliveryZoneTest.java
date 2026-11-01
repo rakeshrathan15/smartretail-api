@@ -3,6 +3,8 @@ package com.smartretail.route;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.smartretail.route.support.DeliveryZone;
+import com.smartretail.route.support.GeoPoint;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 

@@ -20,7 +20,7 @@ public final class TestAuth {
         String body = mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"identifier\":\"admin@smartretail.local\",\"password\":\"Admin@12345\"}"))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
-        return "Bearer " + JsonPath.read(body, "$.accessToken");
+        return "Bearer " + JsonPath.read(body, "$.data.accessToken");
     }
 
     public static String customerBearer(MockMvc mvc) throws Exception {
@@ -28,6 +28,6 @@ public final class TestAuth {
         String body = mvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"fullName\":\"Test Shop\",\"phone\":\"" + phone + "\",\"password\":\"secret123\"}"))
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
-        return "Bearer " + JsonPath.read(body, "$.accessToken");
+        return "Bearer " + JsonPath.read(body, "$.data.accessToken");
     }
 }
