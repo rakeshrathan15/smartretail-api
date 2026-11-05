@@ -38,30 +38,30 @@ class StoreApiTest {
                 {"name": " Kukatpally Depot ", "gstin": "36abcde1234f1z5", "phone": "040 1234 5678",
                  "email": "Depot@Example.com", "city": "Hyderabad", "pincode": "500072"}
                 """).andExpect(status().isCreated())
-                .andExpect(jsonPath("$.name").value("Kukatpally Depot"))
-                .andExpect(jsonPath("$.gstin").value("36ABCDE1234F1Z5"))
-                .andExpect(jsonPath("$.email").value("depot@example.com"))
-                .andExpect(jsonPath("$.active").value(true))
-                .andExpect(jsonPath("$.routeCount").value(0))
-                .andReturn().getResponse().getContentAsString(), "$.id");
+                .andExpect(jsonPath("$.data.name").value("Kukatpally Depot"))
+                .andExpect(jsonPath("$.data.gstin").value("36ABCDE1234F1Z5"))
+                .andExpect(jsonPath("$.data.email").value("depot@example.com"))
+                .andExpect(jsonPath("$.data.active").value(true))
+                .andExpect(jsonPath("$.data.routeCount").value(0))
+                .andReturn().getResponse().getContentAsString(), "$.data.id");
 
         json(post("/api/admin/stores"), "{\"name\": \"kukatpally depot\"}").andExpect(status().isConflict());
         json(put("/api/admin/stores/" + id), "{\"name\": \"Kukatpally Depot\", \"address\": \"KPHB Phase 1\"}")
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.address").value("KPHB Phase 1"))
-                .andExpect(jsonPath("$.gstin").isEmpty());
+                .andExpect(jsonPath("$.data.address").value("KPHB Phase 1"))
+                .andExpect(jsonPath("$.data.gstin").isEmpty());
         json(patch("/api/admin/stores/" + id + "/active"), "{\"active\": false}")
-                .andExpect(status().isOk()).andExpect(jsonPath("$.active").value(false));
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.active").value(false));
 
         // A store with a route cannot be deleted.
         String route = JsonPath.read(json(post("/api/admin/routes"), """
                 {"name": "Depot test route", "days": ["MON"], "storeId": "%s"}
                 """.formatted(id)).andExpect(status().isCreated())
-                .andExpect(jsonPath("$.storeName").value("Kukatpally Depot"))
-                .andReturn().getResponse().getContentAsString(), "$.id");
+                .andExpect(jsonPath("$.data.storeName").value("Kukatpally Depot"))
+                .andReturn().getResponse().getContentAsString(), "$.data.id");
         mvc.perform(delete("/api/admin/stores/" + id).header("Authorization", admin))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.detail").value("Kukatpally Depot has 1 delivery route; move them to another store first"));
+                .andExpect(jsonPath("$.error.message").value("Kukatpally Depot has 1 delivery route; move them to another store first"));
         mvc.perform(delete("/api/admin/routes/" + route).header("Authorization", admin)).andExpect(status().isNoContent());
         mvc.perform(delete("/api/admin/stores/" + id).header("Authorization", admin)).andExpect(status().isNoContent());
     }
@@ -70,10 +70,10 @@ class StoreApiTest {
     void checksStoreDetails() throws Exception {
         json(post("/api/admin/stores"), "{\"name\": \"\", \"gstin\": \"BAD\", \"pincode\": \"5000\", \"email\": \"x\"}")
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.errors.name").exists())
-                .andExpect(jsonPath("$.errors.gstin").value("must be a valid 15-character GSTIN"))
-                .andExpect(jsonPath("$.errors.pincode").value("must be a 6-digit PIN code"))
-                .andExpect(jsonPath("$.errors.email").exists());
+                .andExpect(jsonPath("$.error.details.name").exists())
+                .andExpect(jsonPath("$.error.details.gstin").value("must be a valid 15-character GSTIN"))
+                .andExpect(jsonPath("$.error.details.pincode").value("must be a 6-digit PIN code"))
+                .andExpect(jsonPath("$.error.details.email").exists());
         mvc.perform(get("/api/admin/stores").header("Authorization", TestAuth.customerBearer(mvc)))
                 .andExpect(status().isForbidden());
     }

@@ -3,8 +3,11 @@ package com.smartretail.catalog;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.smartretail.catalog.CatalogDtos.SlabRequest;
-import com.smartretail.common.ApiException;
+import com.smartretail.catalog.dto.request.SlabRequest;
+import com.smartretail.catalog.entity.Product;
+import com.smartretail.catalog.service.AdminCatalogService;
+import com.smartretail.catalog.support.Slugs;
+import com.smartretail.common.exception.ApiException;
 import java.math.BigDecimal;
 import java.util.List;
 import org.junit.jupiter.api.Test;

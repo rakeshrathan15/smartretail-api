@@ -3,18 +3,18 @@ package com.smartretail.inventory;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.jayway.jsonpath.JsonPath;
 import com.smartretail.IntegrationTest;
 import com.smartretail.TestAuth;
-import com.smartretail.common.BusinessCalendar;
+import com.smartretail.common.util.BusinessCalendar;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -48,7 +48,7 @@ class InventoryApiTest {
         supplier = JsonPath.read(body(json(post("/api/admin/suppliers"), admin,
                 "{\"name\":\"Coca-Cola Distributor\",\"phone\":\"0870 2345678\",\"gstin\":\"36abcde1234f1z5\"}")
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.gstin").value("36ABCDE1234F1Z5"))), "$.id");
+                .andExpect(jsonPath("$.data.gstin").value("36ABCDE1234F1Z5"))), "$.data.id");
     }
 
     @Test
@@ -56,18 +56,18 @@ class InventoryApiTest {
         String invoice = "INV-" + UUID.randomUUID();
         receive(supplier, invoice, calendar.today().toString(), item(product, 5, "100.50") + "," + item(otherProduct, 2, "40"))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.receipt.totalCost").value(582.5))
-                .andExpect(jsonPath("$.receipt.supplierName").value("Coca-Cola Distributor"))
-                .andExpect(jsonPath("$.receipt.itemCount").value(2))
-                .andExpect(jsonPath("$.receipt.totalCases").value(7))
-                .andExpect(jsonPath("$.receipt.createdBy").isNotEmpty())
-                .andExpect(jsonPath("$.items[?(@.productId == '" + product + "')].total").value(hasItem(502.5)));
+                .andExpect(jsonPath("$.data.receipt.totalCost").value(582.5))
+                .andExpect(jsonPath("$.data.receipt.supplierName").value("Coca-Cola Distributor"))
+                .andExpect(jsonPath("$.data.receipt.itemCount").value(2))
+                .andExpect(jsonPath("$.data.receipt.totalCases").value(7))
+                .andExpect(jsonPath("$.data.receipt.createdBy").isNotEmpty())
+                .andExpect(jsonPath("$.data.items[?(@.productId == '" + product + "')].total").value(hasItem(502.5)));
 
-        stockRow(product).andExpect(jsonPath("$.items[0].stock").value(15))
-                .andExpect(jsonPath("$.items[0].costPrice").value(100.5));
-        stockRow(otherProduct).andExpect(jsonPath("$.items[0].stock").value(2));
+        stockRow(product).andExpect(jsonPath("$.data.items[0].stock").value(15))
+                .andExpect(jsonPath("$.data.items[0].costPrice").value(100.5));
+        stockRow(otherProduct).andExpect(jsonPath("$.data.items[0].stock").value(2));
         mvc.perform(get("/api/admin/inventory/receipts").header("Authorization", admin).param("supplierId", supplier))
-                .andExpect(jsonPath("$.items[*].invoiceNumber", contains(invoice)));
+                .andExpect(jsonPath("$.data.items[*].invoiceNumber", contains(invoice)));
     }
 
     @Test
@@ -75,8 +75,8 @@ class InventoryApiTest {
         receive(supplier, "BILL-7", calendar.today().toString(), item(product, 5, "100")).andExpect(status().isCreated());
         receive(supplier, "bill-7", calendar.today().toString(), item(product, 5, "100"))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.detail").value("Bill bill-7 from Coca-Cola Distributor has already been entered"));
-        stockRow(product).andExpect(jsonPath("$.items[0].stock").value(15));
+                .andExpect(jsonPath("$.error.message").value("Bill bill-7 from Coca-Cola Distributor has already been entered"));
+        stockRow(product).andExpect(jsonPath("$.data.items[0].stock").value(15));
     }
 
     @Test
@@ -86,58 +86,58 @@ class InventoryApiTest {
         receive(supplier, null, today, item(product, 1, "1") + "," + item(product, 1, "1")).andExpect(status().isBadRequest());
         receive(supplier, null, calendar.today().plusDays(1).toString(), item(product, 1, "1"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.detail").value("The receipt date cannot be in the future"));
+                .andExpect(jsonPath("$.error.message").value("The receipt date cannot be in the future"));
         receive(supplier, null, today, item(product, 0, "1")).andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.errors['items[0].quantity']").exists());
+                .andExpect(jsonPath("$.error.details['items[0].quantity']").exists());
         receive(supplier, null, today, "").andExpect(status().isBadRequest());
         json(patch("/api/admin/suppliers/" + supplier + "/active"), admin, "{\"active\":false}").andExpect(status().isOk());
         receive(supplier, null, today, item(product, 1, "1")).andExpect(status().isBadRequest());
-        stockRow(product).andExpect(jsonPath("$.items[0].stock").value(10));
+        stockRow(product).andExpect(jsonPath("$.data.items[0].stock").value(10));
     }
 
     @Test
     void adjustmentsChangeStockAndKeepAHistory() throws Exception {
         adjust(product, -3, "DAMAGE", "Dropped").andExpect(status().isCreated());
         adjust(product, 1, "CORRECTION", null).andExpect(status().isCreated());
-        stockRow(product).andExpect(jsonPath("$.items[0].stock").value(8));
+        stockRow(product).andExpect(jsonPath("$.data.items[0].stock").value(8));
         mvc.perform(get("/api/admin/inventory/adjustments").header("Authorization", admin).param("productId", product))
-                .andExpect(jsonPath("$.totalItems").value(2))
-                .andExpect(jsonPath("$.items[*].delta", contains(1, -3)))
-                .andExpect(jsonPath("$.items[1].reason").value("DAMAGE"))
-                .andExpect(jsonPath("$.items[1].notes").value("Dropped"))
-                .andExpect(jsonPath("$.items[1].createdBy").isNotEmpty());
+                .andExpect(jsonPath("$.data.totalItems").value(2))
+                .andExpect(jsonPath("$.data.items[*].delta", contains(1, -3)))
+                .andExpect(jsonPath("$.data.items[1].reason").value("DAMAGE"))
+                .andExpect(jsonPath("$.data.items[1].notes").value("Dropped"))
+                .andExpect(jsonPath("$.data.items[1].createdBy").isNotEmpty());
 
         adjust(product, -9, "DAMAGE", null).andExpect(status().isConflict())
-                .andExpect(jsonPath("$.detail").value(org.hamcrest.Matchers.startsWith("Only 8 cases of")));
+                .andExpect(jsonPath("$.error.message").value(org.hamcrest.Matchers.startsWith("Only 8 cases of")));
         adjust(product, 0, "CORRECTION", null).andExpect(status().isBadRequest());
         adjust(product, 1, "OTHER", " ").andExpect(status().isBadRequest());
         adjust(NO_PRODUCT, 1, "CORRECTION", null).andExpect(status().isNotFound());
-        stockRow(product).andExpect(jsonPath("$.items[0].stock").value(8));
+        stockRow(product).andExpect(jsonPath("$.data.items[0].stock").value(8));
     }
 
     @Test
     void showsLowAndOutOfStockAndTotals() throws Exception {
         String low = newProduct(3);
         mvc.perform(get("/api/admin/inventory").header("Authorization", admin).param("level", "LOW").param("size", "100"))
-                .andExpect(jsonPath("$.items[*].productId", hasItem(low)))
-                .andExpect(jsonPath("$.items[*].productId", not(hasItem(product))));
+                .andExpect(jsonPath("$.data.items[*].productId", hasItem(low)))
+                .andExpect(jsonPath("$.data.items[*].productId", not(hasItem(product))));
         mvc.perform(get("/api/admin/inventory").header("Authorization", admin).param("level", "OUT").param("size", "100"))
-                .andExpect(jsonPath("$.items[*].productId", hasItem(otherProduct)));
-        stockRow(low).andExpect(jsonPath("$.items[0].level").value("LOW"))
-                .andExpect(jsonPath("$.items[0].stockValue").value(1500));
+                .andExpect(jsonPath("$.data.items[*].productId", hasItem(otherProduct)));
+        stockRow(low).andExpect(jsonPath("$.data.items[0].level").value("LOW"))
+                .andExpect(jsonPath("$.data.items[0].stockValue").value(1500));
 
-        double before = number("$.stockValue");
-        double profitBefore = number("$.potentialProfit");
+        double before = number("$.data.stockValue");
+        double profitBefore = number("$.data.potentialProfit");
         adjust(product, 2, "CORRECTION", null).andExpect(status().isCreated());
-        org.assertj.core.api.Assertions.assertThat(number("$.stockValue")).isEqualTo(before + 1000);
-        org.assertj.core.api.Assertions.assertThat(number("$.potentialProfit")).isEqualTo(profitBefore + 200);
+        org.assertj.core.api.Assertions.assertThat(number("$.data.stockValue")).isEqualTo(before + 1000);
+        org.assertj.core.api.Assertions.assertThat(number("$.data.potentialProfit")).isEqualTo(profitBefore + 200);
     }
 
     @Test
     void editingAProductCannotChangeStockBehindTheHistory() throws Exception {
         json(put("/api/admin/products/" + product), admin, productBody("Renamed " + UUID.randomUUID(), 999))
                 .andExpect(status().isOk());
-        stockRow(product).andExpect(jsonPath("$.items[0].stock").value(10));
+        stockRow(product).andExpect(jsonPath("$.data.items[0].stock").value(10));
     }
 
     @Test
@@ -150,13 +150,13 @@ class InventoryApiTest {
     @Test
     void suppliersAreEditableAndAdminOnly() throws Exception {
         json(put("/api/admin/suppliers/" + supplier), admin, "{\"name\":\"Renamed\",\"notes\":\"Calls on Monday\"}")
-                .andExpect(status().isOk()).andExpect(jsonPath("$.name").value("Renamed"))
-                .andExpect(jsonPath("$.phone").isEmpty());
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.name").value("Renamed"))
+                .andExpect(jsonPath("$.data.phone").isEmpty());
         json(post("/api/admin/suppliers"), admin, "{\"name\":\"\",\"phone\":\"x\",\"gstin\":\"BAD\"}")
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.errors.name").exists())
-                .andExpect(jsonPath("$.errors.phone").exists())
-                .andExpect(jsonPath("$.errors.gstin").exists());
+                .andExpect(jsonPath("$.error.details.name").exists())
+                .andExpect(jsonPath("$.error.details.phone").exists())
+                .andExpect(jsonPath("$.error.details.gstin").exists());
         String customer = TestAuth.customerBearer(mvc);
         mvc.perform(get("/api/admin/suppliers").header("Authorization", customer)).andExpect(status().isForbidden());
         mvc.perform(get("/api/admin/inventory").header("Authorization", customer)).andExpect(status().isForbidden());
@@ -175,7 +175,7 @@ class InventoryApiTest {
 
     private String newProduct(int stock) throws Exception {
         return JsonPath.read(body(json(post("/api/admin/products"), admin, productBody("Stock Test " + UUID.randomUUID(), stock))
-                .andExpect(status().isCreated())), "$.product.id");
+                .andExpect(status().isCreated())), "$.data.product.id");
     }
 
     private static String productBody(String name, int stock) {
@@ -185,7 +185,7 @@ class InventoryApiTest {
     }
 
     private ResultActions stockRow(String productId) throws Exception {
-        String name = JsonPath.read(body(mvc.perform(get("/api/admin/products/" + productId).header("Authorization", admin))), "$.product.name");
+        String name = JsonPath.read(body(mvc.perform(get("/api/admin/products/" + productId).header("Authorization", admin))), "$.data.product.name");
         return mvc.perform(get("/api/admin/inventory").header("Authorization", admin).param("q", name));
     }
 

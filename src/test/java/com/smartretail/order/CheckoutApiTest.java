@@ -61,37 +61,37 @@ class CheckoutApiTest {
         // 10 × ₹378 (10+ slab) + 2 × ₹240 = ₹4,260; SAVE5 = ₹213; ₹4,047 is below ₹5,000 so delivery ₹500.
         quote(items(thumsUp, 10, bisleri, 2), "save5")
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.subtotal").value(4260.0))
-                .andExpect(jsonPath("$.lines[0].pricePerCase").value(378.0))
-                .andExpect(jsonPath("$.lines[0].saving").value(420.0))
-                .andExpect(jsonPath("$.couponCode").value("SAVE5"))
-                .andExpect(jsonPath("$.couponDiscount").value(213.0))
-                .andExpect(jsonPath("$.deliveryCharge").value(500.0))
-                .andExpect(jsonPath("$.amountForFreeDelivery").value(953.0))
-                .andExpect(jsonPath("$.total").value(4547.0))
-                .andExpect(jsonPath("$.totalCases").value(12))
-                .andExpect(jsonPath("$.upiId").value("smartretail@upi"))
-                .andExpect(jsonPath("$.credit").doesNotExist())
-                .andExpect(jsonPath("$.canPlaceOrder").value(true));
+                .andExpect(jsonPath("$.data.subtotal").value(4260.0))
+                .andExpect(jsonPath("$.data.lines[0].pricePerCase").value(378.0))
+                .andExpect(jsonPath("$.data.lines[0].saving").value(420.0))
+                .andExpect(jsonPath("$.data.couponCode").value("SAVE5"))
+                .andExpect(jsonPath("$.data.couponDiscount").value(213.0))
+                .andExpect(jsonPath("$.data.deliveryCharge").value(500.0))
+                .andExpect(jsonPath("$.data.amountForFreeDelivery").value(953.0))
+                .andExpect(jsonPath("$.data.total").value(4547.0))
+                .andExpect(jsonPath("$.data.totalCases").value(12))
+                .andExpect(jsonPath("$.data.upiId").value("smartretail@upi"))
+                .andExpect(jsonPath("$.data.credit").doesNotExist())
+                .andExpect(jsonPath("$.data.canPlaceOrder").value(true));
     }
 
     @Test
     void blocksSmallOrdersAndTooManyCases() throws Exception {
         quote(items(bisleri, 2), null)
-                .andExpect(jsonPath("$.canPlaceOrder").value(false))
-                .andExpect(jsonPath("$.problems[0]").value("Minimum order is ₹1,000. Add ₹520 more."));
+                .andExpect(jsonPath("$.data.canPlaceOrder").value(false))
+                .andExpect(jsonPath("$.data.problems[0]").value("Minimum order is ₹1,000. Add ₹520 more."));
         quote(items(monster, 500), null)
-                .andExpect(jsonPath("$.lines[0].problem").value(startsWith("Only ")))
-                .andExpect(jsonPath("$.canPlaceOrder").value(false));
+                .andExpect(jsonPath("$.data.lines[0].problem").value(startsWith("Only ")))
+                .andExpect(jsonPath("$.data.canPlaceOrder").value(false));
         quote(items(bisleri, 5), "NOSUCHCODE")
-                .andExpect(jsonPath("$.couponProblem").value("This coupon code is not valid"))
-                .andExpect(jsonPath("$.couponDiscount").value(0.0));
+                .andExpect(jsonPath("$.data.couponProblem").value("This coupon code is not valid"))
+                .andExpect(jsonPath("$.data.couponDiscount").value(0.0));
         // Visitors who have not signed in see real prices too, but no credit.
         mvc.perform(post("/api/checkout/quote").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"items\":" + items(thumsUp, 10) + "}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.lines[0].pricePerCase").value(378.0))
-                .andExpect(jsonPath("$.credit").doesNotExist());
+                .andExpect(jsonPath("$.data.lines[0].pricePerCase").value(378.0))
+                .andExpect(jsonPath("$.data.credit").doesNotExist());
         // Placing an order still needs an account.
         mvc.perform(post("/api/orders").contentType(MediaType.APPLICATION_JSON).content("{\"items\":[]}"))
                 .andExpect(status().isUnauthorized());
@@ -105,32 +105,32 @@ class CheckoutApiTest {
 
         String body = place(customer, items(thumsUp, 10, bisleri, 2), "flat100", address, "COD", null, 4660)
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.orderNumber").value(startsWith("SR")))
-                .andExpect(jsonPath("$.status").value("PLACED"))
-                .andExpect(jsonPath("$.paymentMethod").value("COD"))
-                .andExpect(jsonPath("$.paymentStatus").value("PENDING"))
-                .andExpect(jsonPath("$.paymentTerms").value("PREPAID"))
-                .andExpect(jsonPath("$.subtotal").value(4260.0))
-                .andExpect(jsonPath("$.discount").value(100.0))
-                .andExpect(jsonPath("$.deliveryCharge").value(500.0))
-                .andExpect(jsonPath("$.total").value(4660.0))
-                .andExpect(jsonPath("$.items", hasSize(2)))
-                .andExpect(jsonPath("$.items[0].productName").value("Thums Up 750ml PET"))
-                .andExpect(jsonPath("$.address.city").value("Hyderabad"))
-                .andExpect(jsonPath("$.address.phone").value("9876501234"))
+                .andExpect(jsonPath("$.data.orderNumber").value(startsWith("SR")))
+                .andExpect(jsonPath("$.data.status").value("PLACED"))
+                .andExpect(jsonPath("$.data.paymentMethod").value("COD"))
+                .andExpect(jsonPath("$.data.paymentStatus").value("PENDING"))
+                .andExpect(jsonPath("$.data.paymentTerms").value("PREPAID"))
+                .andExpect(jsonPath("$.data.subtotal").value(4260.0))
+                .andExpect(jsonPath("$.data.discount").value(100.0))
+                .andExpect(jsonPath("$.data.deliveryCharge").value(500.0))
+                .andExpect(jsonPath("$.data.total").value(4660.0))
+                .andExpect(jsonPath("$.data.items", hasSize(2)))
+                .andExpect(jsonPath("$.data.items[0].productName").value("Thums Up 750ml PET"))
+                .andExpect(jsonPath("$.data.address.city").value("Hyderabad"))
+                .andExpect(jsonPath("$.data.address.phone").value("9876501234"))
                 .andReturn().getResponse().getContentAsString();
-        String orderId = JsonPath.read(body, "$.id");
+        String orderId = JsonPath.read(body, "$.data.id");
 
         assertThat(stock(thumsUp)).isEqualTo(stockBefore - 10);
         assertThat(jdbc.queryForObject("select used_count from coupons where code = 'FLAT100'", Integer.class))
                 .isEqualTo(couponUsesBefore + 1);
 
         mvc.perform(get("/api/me/orders").header("Authorization", customer))
-                .andExpect(jsonPath("$.items[0].id").value(orderId))
-                .andExpect(jsonPath("$.items[0].totalCases").value(12));
+                .andExpect(jsonPath("$.data.items[0].id").value(orderId))
+                .andExpect(jsonPath("$.data.items[0].totalCases").value(12));
         mvc.perform(get("/api/me/orders/" + orderId).header("Authorization", customer))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.couponCode").value("FLAT100"));
+                .andExpect(jsonPath("$.data.couponCode").value("FLAT100"));
 
         // Another shop cannot see it.
         mvc.perform(get("/api/me/orders/" + orderId).header("Authorization", TestAuth.customerBearer(mvc)))
@@ -144,16 +144,16 @@ class CheckoutApiTest {
 
         place(customer, items(thumsUp, 10), null, address, "COD", null, 3000)
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.detail").value(startsWith("Prices have changed")));
+                .andExpect(jsonPath("$.error.message").value(startsWith("Prices have changed")));
         place(customer, items(monster, 500), null, address, "COD", null, null)
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.detail").value(startsWith("Only ")));
+                .andExpect(jsonPath("$.error.message").value(startsWith("Only ")));
         place(customer, items(bisleri, 2), null, address, "COD", null, null)
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.detail").value(startsWith("Minimum order")));
+                .andExpect(jsonPath("$.error.message").value(startsWith("Minimum order")));
         place(customer, items(thumsUp, 10), "NOSUCHCODE", address, "COD", null, null)
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.detail").value("This coupon code is not valid"));
+                .andExpect(jsonPath("$.error.message").value("This coupon code is not valid"));
         place(customer, items(thumsUp, 10), null, address, "CASH", null, null)
                 .andExpect(status().isBadRequest());
 
@@ -194,18 +194,18 @@ class CheckoutApiTest {
         String address = createAddress(customer, "Shop");
         place(customer, items(thumsUp, 10), null, address, "UPI", null, null)
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.detail").value("Upload the screenshot of your UPI payment"));
+                .andExpect(jsonPath("$.error.message").value("Upload the screenshot of your UPI payment"));
 
         String upload = mvc.perform(multipart("/api/me/payment-screenshots")
                         .file(new MockMultipartFile("file", "paid.png", "image/png", PNG))
                         .header("Authorization", customer))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.reference").value(startsWith("payments/")))
+                .andExpect(jsonPath("$.data.reference").value(startsWith("payments/")))
                 .andReturn().getResponse().getContentAsString();
 
-        place(customer, items(thumsUp, 10), null, address, "UPI", JsonPath.read(upload, "$.reference"), null)
+        place(customer, items(thumsUp, 10), null, address, "UPI", JsonPath.read(upload, "$.data.reference"), null)
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.paymentStatus").value("PENDING_VERIFICATION"));
+                .andExpect(jsonPath("$.data.paymentStatus").value("PENDING_VERIFICATION"));
     }
 
     @Test
@@ -213,31 +213,31 @@ class CheckoutApiTest {
         String address = createAddress(customer, "Shop");
         place(customer, items(thumsUp, 10), null, address, "CREDIT", null, null)
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.detail").value(startsWith("Credit is not enabled")));
+                .andExpect(jsonPath("$.error.message").value(startsWith("Credit is not enabled")));
 
         String userId = JsonPath.read(mvc.perform(get("/api/me").header("Authorization", customer))
-                .andReturn().getResponse().getContentAsString(), "$.id");
+                .andReturn().getResponse().getContentAsString(), "$.data.id");
         String admin = TestAuth.adminBearer(mvc);
         mvc.perform(put("/api/admin/shops/credit").header("Authorization", admin)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"userId\":\"" + userId + "\",\"shopName\":\"Ravi Kirana\",\"creditLimit\":5000}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.creditLimit").value(5000))
-                .andExpect(jsonPath("$.outstanding").value(0));
+                .andExpect(jsonPath("$.data.creditLimit").value(5000))
+                .andExpect(jsonPath("$.data.outstanding").value(0));
 
-        quote(items(thumsUp, 10), null).andExpect(jsonPath("$.credit.available").value(5000.0));
+        quote(items(thumsUp, 10), null).andExpect(jsonPath("$.data.credit.available").value(5000.0));
 
         // ₹3,780 + ₹500 delivery = ₹4,280 on credit, leaving ₹720.
         place(customer, items(thumsUp, 10), null, address, "CREDIT", null, null)
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.paymentTerms").value("CREDIT"))
-                .andExpect(jsonPath("$.paymentMethod").value("CREDIT"));
+                .andExpect(jsonPath("$.data.paymentTerms").value("CREDIT"))
+                .andExpect(jsonPath("$.data.paymentMethod").value("CREDIT"));
         quote(items(thumsUp, 10), null)
-                .andExpect(jsonPath("$.credit.outstanding").value(4280.0))
-                .andExpect(jsonPath("$.credit.available").value(720.0));
+                .andExpect(jsonPath("$.data.credit.outstanding").value(4280.0))
+                .andExpect(jsonPath("$.data.credit.available").value(720.0));
         place(customer, items(thumsUp, 10), null, address, "CREDIT", null, null)
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.detail").value(startsWith("Not enough credit: ₹720 available")));
+                .andExpect(jsonPath("$.error.message").value(startsWith("Not enough credit: ₹720 available")));
     }
 
     @Test
@@ -246,8 +246,8 @@ class CheckoutApiTest {
         jdbc.update("update store_settings set value = 'false' where key = 'store_open'");
         try {
             quote(items(thumsUp, 10), null)
-                    .andExpect(jsonPath("$.storeOpen").value(false))
-                    .andExpect(jsonPath("$.problems[0]").value(startsWith("The store is closed")));
+                    .andExpect(jsonPath("$.data.storeOpen").value(false))
+                    .andExpect(jsonPath("$.data.problems[0]").value(startsWith("The store is closed")));
             place(customer, items(thumsUp, 10), null, address, "COD", null, null)
                     .andExpect(status().isConflict());
         } finally {
@@ -261,26 +261,26 @@ class CheckoutApiTest {
         String second = JsonPath.read(perform(post("/api/me/addresses"), customer, """
                 {"label": "Godown", "fullName": "Ravi", "phone": "+91 98765 01234", "addressLine1": "Plot 9",
                  "city": "Secunderabad", "pincode": "500003", "makeDefault": true}
-                """).andExpect(status().isCreated()).andReturn().getResponse().getContentAsString(), "$.id");
+                """).andExpect(status().isCreated()).andReturn().getResponse().getContentAsString(), "$.data.id");
 
         mvc.perform(get("/api/me/addresses").header("Authorization", customer))
-                .andExpect(jsonPath("$[0].id").value(second))
-                .andExpect(jsonPath("$[0].isDefault").value(true))
-                .andExpect(jsonPath("$[0].state").value("Telangana"))
-                .andExpect(jsonPath("$[1].isDefault").value(false));
+                .andExpect(jsonPath("$.data[0].id").value(second))
+                .andExpect(jsonPath("$.data[0].isDefault").value(true))
+                .andExpect(jsonPath("$.data[0].state").value("Telangana"))
+                .andExpect(jsonPath("$.data[1].isDefault").value(false));
 
         mvc.perform(delete("/api/me/addresses/" + second).header("Authorization", customer))
                 .andExpect(status().isNoContent());
         mvc.perform(get("/api/me/addresses").header("Authorization", customer))
-                .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].id").value(first))
-                .andExpect(jsonPath("$[0].isDefault").value(true));
+                .andExpect(jsonPath("$.data", hasSize(1)))
+                .andExpect(jsonPath("$.data[0].id").value(first))
+                .andExpect(jsonPath("$.data[0].isDefault").value(true));
 
         perform(post("/api/me/addresses"), customer, """
                 {"fullName": "Ravi", "phone": "9876501234", "addressLine1": "x", "city": "y", "pincode": "5000"}
                 """)
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.errors.pincode").value("must be a 6-digit PIN code"));
+                .andExpect(jsonPath("$.error.details.pincode").value("must be a 6-digit PIN code"));
         mvc.perform(delete("/api/me/addresses/" + first).header("Authorization", TestAuth.customerBearer(mvc)))
                 .andExpect(status().isNotFound());
     }
@@ -292,7 +292,7 @@ class CheckoutApiTest {
                 {"code": "diwali10", "discountType": "PERCENTAGE", "discountValue": 10, "maxDiscount": 1000}
                 """)
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.code").value("DIWALI10"));
+                .andExpect(jsonPath("$.data.code").value("DIWALI10"));
         perform(post("/api/admin/coupons"), admin, """
                 {"code": "DIWALI10", "discountType": "FIXED", "discountValue": 50}
                 """).andExpect(status().isConflict());
@@ -300,30 +300,30 @@ class CheckoutApiTest {
                 {"code": "HALFPLUS", "discountType": "PERCENTAGE", "discountValue": 150}
                 """)
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.detail").value(containsString("above 100")));
+                .andExpect(jsonPath("$.error.message").value(containsString("above 100")));
         perform(post("/api/admin/coupons"), customer, """
                 {"code": "MINE", "discountType": "FIXED", "discountValue": 5000}
                 """).andExpect(status().isForbidden());
 
-        quote(items(thumsUp, 10), "DIWALI10").andExpect(jsonPath("$.couponDiscount").value(378.0));
+        quote(items(thumsUp, 10), "DIWALI10").andExpect(jsonPath("$.data.couponDiscount").value(378.0));
     }
 
     // ---- helpers ---------------------------------------------------------
 
     private String productId(String slug) throws Exception {
-        return JsonPath.read(mvc.perform(get("/api/products/" + slug)).andReturn().getResponse().getContentAsString(), "$.id");
+        return JsonPath.read(mvc.perform(get("/api/products/" + slug)).andReturn().getResponse().getContentAsString(), "$.data.id");
     }
 
     private int stock(String productId) throws Exception {
         return JsonPath.read(mvc.perform(get("/api/admin/products/" + productId).header("Authorization", TestAuth.adminBearer(mvc)))
-                .andReturn().getResponse().getContentAsString(), "$.stockQuantity");
+                .andReturn().getResponse().getContentAsString(), "$.data.stockQuantity");
     }
 
     private String createAddress(String bearer, String label) throws Exception {
         return JsonPath.read(perform(post("/api/me/addresses"), bearer, """
                 {"label": "%s", "fullName": "Ravi Kumar", "phone": "9876501234", "addressLine1": "12 Main Road",
                  "city": "Hyderabad", "pincode": "500001"}
-                """.formatted(label)).andExpect(status().isCreated()).andReturn().getResponse().getContentAsString(), "$.id");
+                """.formatted(label)).andExpect(status().isCreated()).andReturn().getResponse().getContentAsString(), "$.data.id");
     }
 
     private static String items(Object... idsAndQuantities) {

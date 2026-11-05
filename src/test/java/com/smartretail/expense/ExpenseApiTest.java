@@ -11,7 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.jayway.jsonpath.JsonPath;
 import com.smartretail.IntegrationTest;
 import com.smartretail.TestAuth;
-import com.smartretail.common.BusinessCalendar;
+import com.smartretail.common.util.BusinessCalendar;
 import java.time.LocalDate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -56,12 +56,12 @@ class ExpenseApiTest {
 
         mvc.perform(get("/api/admin/expenses/summary").header("Authorization", admin)
                         .param("from", day.toString()).param("to", day.toString()))
-                .andExpect(jsonPath("$.total").value(17500.5))
-                .andExpect(jsonPath("$.count").value(3))
-                .andExpect(jsonPath("$.byCategory[*].category", contains("RENT", "FUEL")));
+                .andExpect(jsonPath("$.data.total").value(17500.5))
+                .andExpect(jsonPath("$.data.count").value(3))
+                .andExpect(jsonPath("$.data.byCategory[*].category", contains("RENT", "FUEL")));
         mvc.perform(get("/api/admin/expenses").header("Authorization", admin)
                         .param("from", day.toString()).param("to", day.toString()).param("category", "RENT"))
-                .andExpect(jsonPath("$.items[*].title", contains("Rent")));
+                .andExpect(jsonPath("$.data.items[*].title", contains("Rent")));
         mvc.perform(get("/api/admin/expenses").header("Authorization", admin)
                         .param("from", day.toString()).param("to", day.minusDays(1).toString()))
                 .andExpect(status().isBadRequest());
@@ -70,12 +70,12 @@ class ExpenseApiTest {
     @Test
     void editsAndDeletes() throws Exception {
         String id = JsonPath.read(json(post("/api/admin/expenses"), admin, expense("Tyre", "MAINTENANCE", "100", DAY))
-                .andReturn().getResponse().getContentAsString(), "$.id");
+                .andReturn().getResponse().getContentAsString(), "$.data.id");
         json(put("/api/admin/expenses/" + id), admin, expense("New tyre", "TRANSPORT", "250", DAY))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.title").value("New tyre"))
-                .andExpect(jsonPath("$.category").value("TRANSPORT"))
-                .andExpect(jsonPath("$.amount").value(250));
+                .andExpect(jsonPath("$.data.title").value("New tyre"))
+                .andExpect(jsonPath("$.data.category").value("TRANSPORT"))
+                .andExpect(jsonPath("$.data.amount").value(250));
         mvc.perform(delete("/api/admin/expenses/" + id).header("Authorization", admin)).andExpect(status().isNoContent());
         mvc.perform(delete("/api/admin/expenses/" + id).header("Authorization", admin)).andExpect(status().isNotFound());
     }
@@ -83,14 +83,14 @@ class ExpenseApiTest {
     @Test
     void checksInputAndAccess() throws Exception {
         json(post("/api/admin/expenses"), admin, expense("x", "FUEL", "0", DAY)).andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.errors.amount").value("must be more than zero"));
+                .andExpect(jsonPath("$.error.details.amount").value("must be more than zero"));
         json(post("/api/admin/expenses"), admin, expense("x", "FUEL", "1.555", DAY)).andExpect(status().isBadRequest());
         json(post("/api/admin/expenses"), admin, expense("", "FUEL", "1", DAY)).andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.errors.title").exists());
+                .andExpect(jsonPath("$.error.details.title").exists());
         json(post("/api/admin/expenses"), admin, expense("x", "NONSENSE", "1", DAY)).andExpect(status().isBadRequest());
         json(post("/api/admin/expenses"), admin, expense("x", "FUEL", "1", calendar.today().plusDays(1)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.detail").value("The expense date cannot be in the future"));
+                .andExpect(jsonPath("$.error.message").value("The expense date cannot be in the future"));
         mvc.perform(get("/api/admin/expenses").header("Authorization", TestAuth.customerBearer(mvc)))
                 .andExpect(status().isForbidden());
     }

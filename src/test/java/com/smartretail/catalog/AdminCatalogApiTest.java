@@ -65,30 +65,30 @@ class AdminCatalogApiTest {
                  "unitsPerCase": 24, "price": 600, "originalPrice": 650, "costPrice": 520, "stockQuantity": 40}
                 """.formatted(categoryId))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.product.slug").value(startsWith("test-soda-500ml")))
-                .andExpect(jsonPath("$.costPrice").value(520.0))
-                .andExpect(jsonPath("$.active").value(true))
+                .andExpect(jsonPath("$.data.product.slug").value(startsWith("test-soda-500ml")))
+                .andExpect(jsonPath("$.data.costPrice").value(520.0))
+                .andExpect(jsonPath("$.data.active").value(true))
                 .andReturn().getResponse().getContentAsString();
-        String id = JsonPath.read(body, "$.product.id");
-        String slug = JsonPath.read(body, "$.product.slug");
+        String id = JsonPath.read(body, "$.data.product.id");
+        String slug = JsonPath.read(body, "$.data.product.slug");
 
         perform(put("/api/admin/products/" + id + "/slabs"), """
                 {"slabs": [{"minQty": 20, "pricePerCase": 540}, {"minQty": 5, "maxQty": 19, "pricePerCase": 570}]}
                 """)
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.product.slabs[*].minQty", contains(5, 20)))
-                .andExpect(jsonPath("$.product.lowestPrice").value(540.0));
+                .andExpect(jsonPath("$.data.product.slabs[*].minQty", contains(5, 20)))
+                .andExpect(jsonPath("$.data.product.lowestPrice").value(540.0));
         // Replacing slabs again reuses min qty 5, which must not collide with the old row.
         perform(put("/api/admin/products/" + id + "/slabs"), """
                 {"slabs": [{"minQty": 5, "pricePerCase": 580}]}
                 """)
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.product.slabs.length()").value(1));
+                .andExpect(jsonPath("$.data.product.slabs.length()").value(1));
         perform(put("/api/admin/products/" + id + "/slabs"), """
                 {"slabs": [{"minQty": 5, "maxQty": 30, "pricePerCase": 580}, {"minQty": 20, "pricePerCase": 560}]}
                 """)
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.detail").value(org.hamcrest.Matchers.containsString("overlap")));
+                .andExpect(jsonPath("$.error.message").value(org.hamcrest.Matchers.containsString("overlap")));
 
         mvc.perform(get("/api/products/" + slug)).andExpect(status().isOk());
 
@@ -96,13 +96,13 @@ class AdminCatalogApiTest {
                 {"name": "Test Soda 500ml", "categoryId": "%s", "unitsPerCase": 24, "price": 600, "active": false}
                 """.formatted(categoryId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.active").value(false));
+                .andExpect(jsonPath("$.data.active").value(false));
         mvc.perform(get("/api/products/" + slug)).andExpect(status().isNotFound());
         mvc.perform(get("/api/admin/products").header("Authorization", admin).param("q", "test soda"))
-                .andExpect(jsonPath("$.items[0].slug").value(slug))
-                .andExpect(jsonPath("$.items[0].active").value(false))
-                .andExpect(jsonPath("$.items[0].stockQuantity").value(40))
-                .andExpect(jsonPath("$.items[0].categoryName").value(startsWith("Test Sodas")));
+                .andExpect(jsonPath("$.data.items[0].slug").value(slug))
+                .andExpect(jsonPath("$.data.items[0].active").value(false))
+                .andExpect(jsonPath("$.data.items[0].stockQuantity").value(40))
+                .andExpect(jsonPath("$.data.items[0].categoryName").value(startsWith("Test Sodas")));
 
         // A category with products cannot be deleted.
         mvc.perform(delete("/api/admin/categories/" + categoryId).header("Authorization", admin))
@@ -117,9 +117,9 @@ class AdminCatalogApiTest {
     void validatesProductAndCategoryInput() throws Exception {
         perform(post("/api/admin/products"), "{\"name\": \"\", \"unitsPerCase\": 0}")
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.errors.name").exists())
-                .andExpect(jsonPath("$.errors.unitsPerCase").exists())
-                .andExpect(jsonPath("$.errors.price").exists());
+                .andExpect(jsonPath("$.error.details.name").exists())
+                .andExpect(jsonPath("$.error.details.unitsPerCase").exists())
+                .andExpect(jsonPath("$.error.details.price").exists());
         perform(post("/api/admin/categories"), "{\"name\": \"colas\"}").andExpect(status().isConflict());
         perform(post("/api/admin/products"), """
                 {"name": "Orphan", "categoryId": "%s", "unitsPerCase": 1, "price": 10}
@@ -132,40 +132,40 @@ class AdminCatalogApiTest {
         String body = perform(post("/api/admin/products"), """
                 {"name": "Image Test Drink", "unitsPerCase": 6, "price": 100}
                 """).andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
-        String id = JsonPath.read(body, "$.product.id");
+        String id = JsonPath.read(body, "$.data.product.id");
 
         String first = upload("/api/admin/products/" + id + "/images", "front.png", PNG)
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.product.images[0].primary").value(true))
-                .andExpect(jsonPath("$.product.images[0].url").value(startsWith("/uploads/products/")))
+                .andExpect(jsonPath("$.data.product.images[0].primary").value(true))
+                .andExpect(jsonPath("$.data.product.images[0].url").value(startsWith("/uploads/products/")))
                 .andReturn().getResponse().getContentAsString();
-        String firstUrl = JsonPath.read(first, "$.product.images[0].url");
-        String firstId = JsonPath.read(first, "$.product.images[0].id");
+        String firstUrl = JsonPath.read(first, "$.data.product.images[0].url");
+        String firstId = JsonPath.read(first, "$.data.product.images[0].id");
 
         mvc.perform(get(firstUrl)).andExpect(status().isOk()).andExpect(content().bytes(PNG));
 
         String second = upload("/api/admin/products/" + id + "/images", "back.png", PNG)
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.product.images[1].primary").value(false))
+                .andExpect(jsonPath("$.data.product.images[1].primary").value(false))
                 .andReturn().getResponse().getContentAsString();
-        String secondId = JsonPath.read(second, "$.product.images[1].id");
+        String secondId = JsonPath.read(second, "$.data.product.images[1].id");
 
         mvc.perform(put("/api/admin/products/" + id + "/images/" + secondId + "/primary").header("Authorization", admin))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.product.images[?(@.primary == true)].id", contains(secondId)));
+                .andExpect(jsonPath("$.data.product.images[?(@.primary == true)].id", contains(secondId)));
 
         mvc.perform(get("/api/admin/products").header("Authorization", admin).param("q", "image test drink"))
-                .andExpect(jsonPath("$.items[0].imageUrl").value(JsonPath.<String>read(second, "$.product.images[1].url")));
+                .andExpect(jsonPath("$.data.items[0].imageUrl").value(JsonPath.<String>read(second, "$.data.product.images[1].url")));
 
         mvc.perform(delete("/api/admin/products/" + id + "/images/" + firstId).header("Authorization", admin))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.product.images.length()").value(1));
+                .andExpect(jsonPath("$.data.product.images.length()").value(1));
         mvc.perform(get(firstUrl)).andExpect(status().isNotFound());
         assertThat(Files.exists(Path.of("build/test-uploads", firstUrl.substring("/uploads/".length())))).isFalse();
 
         upload("/api/admin/products/" + id + "/images", "evil.png", "<script>alert(1)</script>".getBytes())
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.detail").value("Only JPG, PNG or WebP images are allowed"));
+                .andExpect(jsonPath("$.error.message").value("Only JPG, PNG or WebP images are allowed"));
 
         mvc.perform(delete("/api/admin/products/" + id).header("Authorization", admin)).andExpect(status().isNoContent());
     }
@@ -175,25 +175,25 @@ class AdminCatalogApiTest {
         String created = perform(post("/api/admin/banners"), """
                 {"title": "Diwali offer", "subtitle": "Extra 5% on 50+ cases", "ctaText": "Shop", "link": "/shop"}
                 """).andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
-        String bannerId = JsonPath.read(created, "$.id");
+        String bannerId = JsonPath.read(created, "$.data.id");
 
         upload("/api/admin/banners/" + bannerId + "/image", "banner.png", PNG)
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.imageUrl").value(startsWith("/uploads/banners/")));
+                .andExpect(jsonPath("$.data.imageUrl").value(startsWith("/uploads/banners/")));
 
         String all = mvc.perform(get("/api/admin/banners").header("Authorization", admin))
                 .andReturn().getResponse().getContentAsString();
-        List<String> ids = JsonPath.read(all, "$[*].id");
+        List<String> ids = JsonPath.read(all, "$.data[*].id");
         List<String> reversed = ids.reversed();
         perform(put("/api/admin/banners/order"), "{\"ids\": [\"" + String.join("\",\"", reversed) + "\"]}")
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").value(reversed.getFirst()));
+                .andExpect(jsonPath("$.data[0].id").value(reversed.getFirst()));
         perform(put("/api/admin/banners/order"), "{\"ids\": [\"" + bannerId + "\"]}")
                 .andExpect(status().isBadRequest());
 
         perform(put("/api/admin/banners/" + bannerId), "{\"title\": \"Diwali offer\", \"active\": false}")
                 .andExpect(status().isOk());
-        mvc.perform(get("/api/banners")).andExpect(jsonPath("$[*].id", not(hasItem(bannerId))));
+        mvc.perform(get("/api/banners")).andExpect(jsonPath("$.data[*].id", not(hasItem(bannerId))));
 
         mvc.perform(delete("/api/admin/banners/" + bannerId).header("Authorization", admin))
                 .andExpect(status().isNoContent());
@@ -206,7 +206,7 @@ class AdminCatalogApiTest {
     private String createCategory(String name) throws Exception {
         String body = perform(post("/api/admin/categories"), "{\"name\": \"" + name + "\"}")
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
-        return JsonPath.read(body, "$.id");
+        return JsonPath.read(body, "$.data.id");
     }
 
     private ResultActions perform(MockHttpServletRequestBuilder request, String json) throws Exception {

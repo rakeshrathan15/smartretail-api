@@ -31,8 +31,10 @@ class SettingsAndShopProfileApiTest {
     @BeforeEach
     void rememberSettings() throws Exception {
         admin = TestAuth.adminBearer(mvc);
-        original = mvc.perform(get("/api/admin/settings").header("Authorization", admin))
+        String settings = mvc.perform(get("/api/admin/settings").header("Authorization", admin))
                 .andReturn().getResponse().getContentAsString();
+        // Keep only the settings themselves, so they can be sent back unchanged afterwards.
+        original = JsonPath.parse((Object) JsonPath.read(settings, "$.data")).jsonString();
     }
 
     /** Other tests rely on the seed values (delivery ₹500, minimum ₹1,000). */
@@ -45,12 +47,12 @@ class SettingsAndShopProfileApiTest {
     void adminReadsTheSeedSettings() throws Exception {
         mvc.perform(get("/api/admin/settings").header("Authorization", admin))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.storeName").value("S'Mart Retail"))
-                .andExpect(jsonPath("$.storeOpen").value(true))
-                .andExpect(jsonPath("$.deliveryCharge").value(500))
-                .andExpect(jsonPath("$.freeDeliveryAbove").value(5000))
-                .andExpect(jsonPath("$.minOrderValue").value(1000))
-                .andExpect(jsonPath("$.upiId").value("smartretail@upi"));
+                .andExpect(jsonPath("$.data.storeName").value("S'Mart Retail"))
+                .andExpect(jsonPath("$.data.storeOpen").value(true))
+                .andExpect(jsonPath("$.data.deliveryCharge").value(500))
+                .andExpect(jsonPath("$.data.freeDeliveryAbove").value(5000))
+                .andExpect(jsonPath("$.data.minOrderValue").value(1000))
+                .andExpect(jsonPath("$.data.upiId").value("smartretail@upi"));
         mvc.perform(get("/api/admin/settings").header("Authorization", TestAuth.customerBearer(mvc)))
                 .andExpect(status().isForbidden());
     }
@@ -64,26 +66,26 @@ class SettingsAndShopProfileApiTest {
                  "gstNumber": "36abcde1234f1z5", "fssaiNumber": "13624002000232", "showCertifications": true}
                 """)
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.storeName").value("Sri Sai Beverages"))
-                .andExpect(jsonPath("$.storeEmail").value("orders@srisai.in"))
-                .andExpect(jsonPath("$.gstNumber").value("36ABCDE1234F1Z5"));
+                .andExpect(jsonPath("$.data.storeName").value("Sri Sai Beverages"))
+                .andExpect(jsonPath("$.data.storeEmail").value("orders@srisai.in"))
+                .andExpect(jsonPath("$.data.gstNumber").value("36ABCDE1234F1Z5"));
 
         mvc.perform(get("/api/settings/public"))
-                .andExpect(jsonPath("$.store_name").value("Sri Sai Beverages"))
-                .andExpect(jsonPath("$.store_open").value("false"))
-                .andExpect(jsonPath("$.delivery_charge").value("300"))
-                .andExpect(jsonPath("$.gst_number").value("36ABCDE1234F1Z5"));
+                .andExpect(jsonPath("$.data.store_name").value("Sri Sai Beverages"))
+                .andExpect(jsonPath("$.data.store_open").value("false"))
+                .andExpect(jsonPath("$.data.delivery_charge").value("300"))
+                .andExpect(jsonPath("$.data.gst_number").value("36ABCDE1234F1Z5"));
 
         String productId = JsonPath.read(mvc.perform(get("/api/products/bisleri-1l-packaged-water"))
-                .andReturn().getResponse().getContentAsString(), "$.id");
+                .andReturn().getResponse().getContentAsString(), "$.data.id");
         json(post("/api/checkout/quote"), null, "{\"items\": [{\"productId\": \"" + productId + "\", \"quantity\": 5}]}")
-                .andExpect(jsonPath("$.storeOpen").value(false))
-                .andExpect(jsonPath("$.deliveryCharge").value(300.0))
-                .andExpect(jsonPath("$.minOrderValue").value(2500))
-                .andExpect(jsonPath("$.upiId").value("srisai@okaxis"))
-                .andExpect(jsonPath("$.problems", hasSize(2)))
-                .andExpect(jsonPath("$.problems[0]").value(org.hamcrest.Matchers.startsWith("The store is closed")))
-                .andExpect(jsonPath("$.problems[1]").value("Minimum order is ₹2,500. Add ₹1,300 more."));
+                .andExpect(jsonPath("$.data.storeOpen").value(false))
+                .andExpect(jsonPath("$.data.deliveryCharge").value(300.0))
+                .andExpect(jsonPath("$.data.minOrderValue").value(2500))
+                .andExpect(jsonPath("$.data.upiId").value("srisai@okaxis"))
+                .andExpect(jsonPath("$.data.problems", hasSize(2)))
+                .andExpect(jsonPath("$.data.problems[0]").value(org.hamcrest.Matchers.startsWith("The store is closed")))
+                .andExpect(jsonPath("$.data.problems[1]").value("Minimum order is ₹2,500. Add ₹1,300 more."));
     }
 
     @Test
@@ -94,21 +96,21 @@ class SettingsAndShopProfileApiTest {
                  "showCertifications": true}
                 """)
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.errors.storeName").exists())
-                .andExpect(jsonPath("$.errors.storeOpen").exists())
-                .andExpect(jsonPath("$.errors.deliveryCharge").exists())
-                .andExpect(jsonPath("$.errors.upiId").value("must look like name@bank"))
-                .andExpect(jsonPath("$.errors.gstNumber").value("must be a valid 15-character GSTIN"))
-                .andExpect(jsonPath("$.errors.fssaiNumber").value("must be the 14-digit FSSAI number"))
-                .andExpect(jsonPath("$.errors.storeEmail").exists());
+                .andExpect(jsonPath("$.error.details.storeName").exists())
+                .andExpect(jsonPath("$.error.details.storeOpen").exists())
+                .andExpect(jsonPath("$.error.details.deliveryCharge").exists())
+                .andExpect(jsonPath("$.error.details.upiId").value("must look like name@bank"))
+                .andExpect(jsonPath("$.error.details.gstNumber").value("must be a valid 15-character GSTIN"))
+                .andExpect(jsonPath("$.error.details.fssaiNumber").value("must be the 14-digit FSSAI number"))
+                .andExpect(jsonPath("$.error.details.storeEmail").exists());
     }
 
     @Test
     void shopOwnerCompletesTheShopProfileWithLocation() throws Exception {
         String customer = TestAuth.customerBearer(mvc);
         mvc.perform(get("/api/me/shop-profile").header("Authorization", customer))
-                .andExpect(jsonPath("$.complete").value(false))
-                .andExpect(jsonPath("$.ownerName").value("Test Shop"));
+                .andExpect(jsonPath("$.data.complete").value(false))
+                .andExpect(jsonPath("$.data.ownerName").value("Test Shop"));
 
         json(put("/api/me/shop-profile"), customer, """
                 {"shopName": "Lakshmi Kirana", "ownerName": "Ravi Kumar", "phone": "+91 98765 11111",
@@ -116,20 +118,20 @@ class SettingsAndShopProfileApiTest {
                  "pincode": "500016", "lat": 17.4374614, "lng": 78.4482878}
                 """)
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.complete").value(true))
-                .andExpect(jsonPath("$.phone").value("9876511111"))
-                .andExpect(jsonPath("$.gstNumber").value("36ABCDE1234F1Z5"))
-                .andExpect(jsonPath("$.state").value("Telangana"))
-                .andExpect(jsonPath("$.lat").value(17.437461));
+                .andExpect(jsonPath("$.data.complete").value(true))
+                .andExpect(jsonPath("$.data.phone").value("9876511111"))
+                .andExpect(jsonPath("$.data.gstNumber").value("36ABCDE1234F1Z5"))
+                .andExpect(jsonPath("$.data.state").value("Telangana"))
+                .andExpect(jsonPath("$.data.lat").value(17.437461));
 
         mvc.perform(get("/api/me").header("Authorization", customer))
-                .andExpect(jsonPath("$.shopProfileComplete").value(true));
+                .andExpect(jsonPath("$.data.shopProfileComplete").value(true));
         // The shop becomes the default delivery address, so checkout is ready.
         mvc.perform(get("/api/me/addresses").header("Authorization", customer))
-                .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].label").value("Shop"))
-                .andExpect(jsonPath("$[0].addressLine1").value("4-1-20, Main Road, Ameerpet"))
-                .andExpect(jsonPath("$[0].isDefault").value(true));
+                .andExpect(jsonPath("$.data", hasSize(1)))
+                .andExpect(jsonPath("$.data[0].label").value("Shop"))
+                .andExpect(jsonPath("$.data[0].addressLine1").value("4-1-20, Main Road, Ameerpet"))
+                .andExpect(jsonPath("$.data[0].isDefault").value(true));
 
         // Saving again updates the profile but does not add a second address.
         json(put("/api/me/shop-profile"), customer, """
@@ -137,9 +139,9 @@ class SettingsAndShopProfileApiTest {
                  "address": "4-1-20, Main Road, Ameerpet", "city": "Hyderabad", "pincode": "500016",
                  "lat": 17.44, "lng": 78.45}
                 """)
-                .andExpect(jsonPath("$.shopName").value("Lakshmi Kirana & General"))
-                .andExpect(jsonPath("$.gstNumber").doesNotExist());
-        mvc.perform(get("/api/me/addresses").header("Authorization", customer)).andExpect(jsonPath("$", hasSize(1)));
+                .andExpect(jsonPath("$.data.shopName").value("Lakshmi Kirana & General"))
+                .andExpect(jsonPath("$.data.gstNumber").doesNotExist());
+        mvc.perform(get("/api/me/addresses").header("Authorization", customer)).andExpect(jsonPath("$.data", hasSize(1)));
     }
 
     @Test
@@ -150,11 +152,11 @@ class SettingsAndShopProfileApiTest {
                  "pincode": "5000", "lat": 78.4, "lng": 17.4, "gstNumber": "BAD"}
                 """)
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.errors.shopName").exists())
-                .andExpect(jsonPath("$.errors.pincode").value("must be a 6-digit PIN code"))
-                .andExpect(jsonPath("$.errors.lat").exists())
-                .andExpect(jsonPath("$.errors.lng").exists())
-                .andExpect(jsonPath("$.errors.gstNumber").exists());
+                .andExpect(jsonPath("$.error.details.shopName").exists())
+                .andExpect(jsonPath("$.error.details.pincode").value("must be a 6-digit PIN code"))
+                .andExpect(jsonPath("$.error.details.lat").exists())
+                .andExpect(jsonPath("$.error.details.lng").exists())
+                .andExpect(jsonPath("$.error.details.gstNumber").exists());
         json(put("/api/me/shop-profile"), null, "{}").andExpect(status().isUnauthorized());
     }
 

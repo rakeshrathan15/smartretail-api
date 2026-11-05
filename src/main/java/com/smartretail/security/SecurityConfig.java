@@ -29,7 +29,7 @@ public class SecurityConfig {
     static final String ROLES_CLAIM = "roles";
 
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    SecurityFilterChain securityFilterChain(HttpSecurity http, ApiSecurityErrorHandler errors) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> {
@@ -45,7 +45,10 @@ public class SecurityConfig {
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/pos/**").hasAnyRole("CASHIER", "ADMIN")
                         .anyRequest().authenticated())
+                .exceptionHandling(handling -> handling.authenticationEntryPoint(errors).accessDeniedHandler(errors))
                 .oauth2ResourceServer(oauth2 -> oauth2
+                        .authenticationEntryPoint(errors)
+                        .accessDeniedHandler(errors)
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())));
         return http.build();
     }

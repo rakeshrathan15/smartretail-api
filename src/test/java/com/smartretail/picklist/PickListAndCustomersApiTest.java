@@ -49,7 +49,7 @@ class PickListAndCustomersApiTest {
                 {"name": "%s", "days": ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"],
                  "zone": {"shape": "CIRCLE", "center": {"lat": %s, "lng": %s}, "radiusKm": 5}}
                 """.formatted(routeName, LAT, LNG)).andExpect(status().isCreated())
-                .andReturn().getResponse().getContentAsString(), "$.id");
+                .andReturn().getResponse().getContentAsString(), "$.data.id");
     }
 
     /** Routes with orders cannot be deleted, so this one is turned off for the other tests. */
@@ -63,7 +63,7 @@ class PickListAndCustomersApiTest {
         String thumsUp = productId("thums-up-750ml-pet");
         String bisleri = productId("bisleri-1l-packaged-water");
         int unitsPerCase = JsonPath.read(mvc.perform(get("/api/products/thums-up-750ml-pet"))
-                .andReturn().getResponse().getContentAsString(), "$.unitsPerCase");
+                .andReturn().getResponse().getContentAsString(), "$.data.unitsPerCase");
 
         String first = shopOnRoute("Lakshmi Kirana");
         String second = shopOnRoute("Balaji Stores");
@@ -74,29 +74,29 @@ class PickListAndCustomersApiTest {
                 .andExpect(status().isOk());
 
         String date = JsonPath.read(mvc.perform(get("/api/me/orders/" + firstOrder).header("Authorization", first))
-                .andReturn().getResponse().getContentAsString(), "$.deliveryDate");
+                .andReturn().getResponse().getContentAsString(), "$.data.deliveryDate");
         assertThat(LocalDate.parse(date)).isAfter(LocalDate.now().minusDays(1));
 
         mvc.perform(get("/api/admin/pick-list").header("Authorization", admin)
                         .param("route", route).param("date", date))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.routeName").value(routeName))
-                .andExpect(jsonPath("$.orders", hasSize(2)))
-                .andExpect(jsonPath("$.orders[*].shopName", contains("Balaji Stores", "Lakshmi Kirana")))
-                .andExpect(jsonPath("$.totals.orders").value(2))
-                .andExpect(jsonPath("$.totals.uniqueSkus").value(2))
-                .andExpect(jsonPath("$.totals.cases").value(10))
-                .andExpect(jsonPath("$.items[?(@.productId == '%s')].cases".formatted(thumsUp), contains(8)))
-                .andExpect(jsonPath("$.items[?(@.productId == '%s')].units".formatted(thumsUp),
+                .andExpect(jsonPath("$.data.routeName").value(routeName))
+                .andExpect(jsonPath("$.data.orders", hasSize(2)))
+                .andExpect(jsonPath("$.data.orders[*].shopName", contains("Balaji Stores", "Lakshmi Kirana")))
+                .andExpect(jsonPath("$.data.totals.orders").value(2))
+                .andExpect(jsonPath("$.data.totals.uniqueSkus").value(2))
+                .andExpect(jsonPath("$.data.totals.cases").value(10))
+                .andExpect(jsonPath("$.data.items[?(@.productId == '%s')].cases".formatted(thumsUp), contains(8)))
+                .andExpect(jsonPath("$.data.items[?(@.productId == '%s')].units".formatted(thumsUp),
                         contains(8 * unitsPerCase)))
-                .andExpect(jsonPath("$.items[?(@.productId == '%s')].cases".formatted(bisleri), contains(2)));
+                .andExpect(jsonPath("$.data.items[?(@.productId == '%s')].cases".formatted(bisleri), contains(2)));
 
         // Another date has nothing to load.
         mvc.perform(get("/api/admin/pick-list").header("Authorization", admin)
                         .param("route", route).param("date", LocalDate.parse(date).plusDays(30).toString()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.items", hasSize(0)))
-                .andExpect(jsonPath("$.totals.cases").value(0));
+                .andExpect(jsonPath("$.data.items", hasSize(0)))
+                .andExpect(jsonPath("$.data.totals.cases").value(0));
     }
 
     @Test
@@ -110,7 +110,7 @@ class PickListAndCustomersApiTest {
         mvc.perform(get("/api/admin/pick-list").header("Authorization", admin)
                         .param("route", "unassigned").param("date", "2026-11-02"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.routeName").value("No route"));
+                .andExpect(jsonPath("$.data.routeName").value("No route"));
         mvc.perform(get("/api/admin/pick-list").header("Authorization", TestAuth.customerBearer(mvc))
                         .param("route", route).param("date", "2026-11-02"))
                 .andExpect(status().isForbidden());
@@ -121,22 +121,22 @@ class PickListAndCustomersApiTest {
         shopOnRoute("Directory Kirana");
         String noPin = TestAuth.customerBearer(mvc);
         String noPinPhone = JsonPath.read(mvc.perform(get("/api/me").header("Authorization", noPin))
-                .andReturn().getResponse().getContentAsString(), "$.phone");
+                .andReturn().getResponse().getContentAsString(), "$.data.phone");
 
         mvc.perform(get("/api/admin/customers").header("Authorization", admin).param("q", "directory kirana"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.items[0].shopName").value("Directory Kirana"))
-                .andExpect(jsonPath("$.items[0].routeName").value(routeName))
-                .andExpect(jsonPath("$.items[0].hasLocation").value(true))
-                .andExpect(jsonPath("$.items[0].joinedAt").isNotEmpty());
+                .andExpect(jsonPath("$.data.items[0].shopName").value("Directory Kirana"))
+                .andExpect(jsonPath("$.data.items[0].routeName").value(routeName))
+                .andExpect(jsonPath("$.data.items[0].hasLocation").value(true))
+                .andExpect(jsonPath("$.data.items[0].joinedAt").isNotEmpty());
 
         mvc.perform(get("/api/admin/customers").header("Authorization", admin).param("route", route).param("size", "100"))
-                .andExpect(jsonPath("$.items[*].shopName", hasItem("Directory Kirana")))
-                .andExpect(jsonPath("$.items[*].phone", not(hasItem(noPinPhone))));
+                .andExpect(jsonPath("$.data.items[*].shopName", hasItem("Directory Kirana")))
+                .andExpect(jsonPath("$.data.items[*].phone", not(hasItem(noPinPhone))));
         mvc.perform(get("/api/admin/customers").header("Authorization", admin)
                         .param("route", "unassigned").param("q", noPinPhone))
-                .andExpect(jsonPath("$.totalItems").value(1))
-                .andExpect(jsonPath("$.items[0].hasLocation").value(false));
+                .andExpect(jsonPath("$.data.totalItems").value(1))
+                .andExpect(jsonPath("$.data.items[0].hasLocation").value(false));
 
         mvc.perform(get("/api/admin/customers").header("Authorization", admin).param("route", "nonsense"))
                 .andExpect(status().isBadRequest());
@@ -156,17 +156,17 @@ class PickListAndCustomersApiTest {
     /** Places a cash order at the quoted total, on the address the shop profile created. */
     private String place(String bearer, String items) throws Exception {
         String addressId = JsonPath.read(mvc.perform(get("/api/me/addresses").header("Authorization", bearer))
-                .andReturn().getResponse().getContentAsString(), "$[0].id");
+                .andReturn().getResponse().getContentAsString(), "$.data[0].id");
         Number total = JsonPath.read(json(post("/api/checkout/quote"), bearer, "{\"items\":" + items + "}")
-                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(), "$.total");
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(), "$.data.total");
         return JsonPath.read(json(post("/api/orders"), bearer, """
                 {"items": %s, "addressId": "%s", "paymentMethod": "COD", "expectedTotal": %s}
                 """.formatted(items, addressId, total)).andExpect(status().isCreated())
-                .andReturn().getResponse().getContentAsString(), "$.id");
+                .andReturn().getResponse().getContentAsString(), "$.data.id");
     }
 
     private String productId(String slug) throws Exception {
-        return JsonPath.read(mvc.perform(get("/api/products/" + slug)).andReturn().getResponse().getContentAsString(), "$.id");
+        return JsonPath.read(mvc.perform(get("/api/products/" + slug)).andReturn().getResponse().getContentAsString(), "$.data.id");
     }
 
     private static String items(Object... idsAndQuantities) {

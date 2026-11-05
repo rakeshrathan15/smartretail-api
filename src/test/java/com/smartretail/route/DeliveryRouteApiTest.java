@@ -60,22 +60,22 @@ class DeliveryRouteApiTest {
         saveShop(inside, "17.9700", "79.5950");
         mvc.perform(get("/api/me/delivery-route").header("Authorization", inside))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.assigned").value(true))
-                .andExpect(jsonPath("$.name").value("Warangal Test"))
-                .andExpect(jsonPath("$.days", contains("MON", "THU")))
-                .andExpect(jsonPath("$.nextDeliveryDate").isNotEmpty());
+                .andExpect(jsonPath("$.data.assigned").value(true))
+                .andExpect(jsonPath("$.data.name").value("Warangal Test"))
+                .andExpect(jsonPath("$.data.days", contains("MON", "THU")))
+                .andExpect(jsonPath("$.data.nextDeliveryDate").isNotEmpty());
 
         String outside = TestAuth.customerBearer(mvc);
         saveShop(outside, "18.4386", "79.1288");
         mvc.perform(get("/api/me/delivery-route").header("Authorization", outside))
-                .andExpect(jsonPath("$.assigned").value(false))
-                .andExpect(jsonPath("$.name", nullValue()));
+                .andExpect(jsonPath("$.data.assigned").value(false))
+                .andExpect(jsonPath("$.data.name", nullValue()));
 
         mvc.perform(get("/api/admin/routes").header("Authorization", admin))
-                .andExpect(jsonPath("$[?(@.id == '%s')].shopCount".formatted(route), contains(1)))
-                .andExpect(jsonPath("$[?(@.id == '%s')].color".formatted(route), contains("#2563EB")));
+                .andExpect(jsonPath("$.data[?(@.id == '%s')].shopCount".formatted(route), contains(1)))
+                .andExpect(jsonPath("$.data[?(@.id == '%s')].color".formatted(route), contains("#2563EB")));
         mvc.perform(get("/api/admin/routes/shop-pins").header("Authorization", admin))
-                .andExpect(jsonPath("$[*].routeId", hasItem(route)));
+                .andExpect(jsonPath("$.data[*].routeId", hasItem(route)));
     }
 
     @Test
@@ -83,7 +83,7 @@ class DeliveryRouteApiTest {
         String shop = TestAuth.customerBearer(mvc);
         saveShop(shop, "18.6725", "78.0941");
         mvc.perform(get("/api/me/delivery-route").header("Authorization", shop))
-                .andExpect(jsonPath("$.assigned").value(false));
+                .andExpect(jsonPath("$.data.assigned").value(false));
 
         // A square drawn over Nizamabad picks up the shop that was already there.
         String body = """
@@ -93,23 +93,23 @@ class DeliveryRouteApiTest {
                 """;
         String route = createRoute(body);
         mvc.perform(get("/api/me/delivery-route").header("Authorization", shop))
-                .andExpect(jsonPath("$.name").value("Nizamabad Test"));
+                .andExpect(jsonPath("$.data.name").value("Nizamabad Test"));
 
         json(patch("/api/admin/routes/" + route + "/active"), "{\"active\": false}").andExpect(status().isOk());
         mvc.perform(get("/api/me/delivery-route").header("Authorization", shop))
-                .andExpect(jsonPath("$.assigned").value(false));
+                .andExpect(jsonPath("$.data.assigned").value(false));
 
         json(patch("/api/admin/routes/" + route + "/active"), "{\"active\": true}").andExpect(status().isOk());
         mvc.perform(get("/api/me/delivery-route").header("Authorization", shop))
-                .andExpect(jsonPath("$.assigned").value(true));
+                .andExpect(jsonPath("$.data.assigned").value(true));
 
         // Moving the area away takes the shop off.
         json(put("/api/admin/routes/" + route), """
                 {"name": "Nizamabad Test", "days": [], "zone": {"shape": "CIRCLE",
                  "center": {"lat": 18.90, "lng": 78.30}, "radiusKm": 2}}
-                """).andExpect(status().isOk()).andExpect(jsonPath("$.zone.shape").value("CIRCLE"));
+                """).andExpect(status().isOk()).andExpect(jsonPath("$.data.zone.shape").value("CIRCLE"));
         mvc.perform(get("/api/me/delivery-route").header("Authorization", shop))
-                .andExpect(jsonPath("$.assigned").value(false));
+                .andExpect(jsonPath("$.data.assigned").value(false));
     }
 
     @Test
@@ -126,20 +126,20 @@ class DeliveryRouteApiTest {
                  "zone": {"shape": "CIRCLE", %s, "radiusKm": 5}}
                 """.formatted(center));
         mvc.perform(get("/api/me/delivery-route").header("Authorization", shop))
-                .andExpect(jsonPath("$.name").value("Khammam First"));
+                .andExpect(jsonPath("$.data.name").value("Khammam First"));
     }
 
     @Test
     void checksRouteDetails() throws Exception {
         json(post("/api/admin/routes"), "{\"name\": \"\", \"days\": [\"MONDAY\"], \"color\": \"blue\"}")
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.errors.name").exists())
-                .andExpect(jsonPath("$.errors.color").value("must be a colour like #2563EB"));
+                .andExpect(jsonPath("$.error.details.name").exists())
+                .andExpect(jsonPath("$.error.details.color").value("must be a colour like #2563EB"));
         json(post("/api/admin/routes"), """
                 {"name": "Too few points", "days": [], "zone": {"shape": "POLYGON",
                  "points": [{"lat": 17.1, "lng": 78.1}, {"lat": 17.2, "lng": 78.2}]}}
                 """).andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.detail").value("An area needs 3 to 200 points"));
+                .andExpect(jsonPath("$.error.message").value("An area needs 3 to 200 points"));
         json(post("/api/admin/routes"), """
                 {"name": "Huge circle", "days": [], "zone": {"shape": "CIRCLE",
                  "center": {"lat": 17.1, "lng": 78.1}, "radiusKm": 500}}
@@ -161,13 +161,13 @@ class DeliveryRouteApiTest {
     void reassignReportsWhereShopsLanded() throws Exception {
         mvc.perform(post("/api/admin/routes/reassign").header("Authorization", admin))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.assigned").isNumber())
-                .andExpect(jsonPath("$.unassigned").isNumber());
+                .andExpect(jsonPath("$.data.assigned").isNumber())
+                .andExpect(jsonPath("$.data.unassigned").isNumber());
     }
 
     private String createRoute(String body) throws Exception {
         String id = JsonPath.read(json(post("/api/admin/routes"), body).andExpect(status().isCreated())
-                .andReturn().getResponse().getContentAsString(), "$.id");
+                .andReturn().getResponse().getContentAsString(), "$.data.id");
         created.add(id);
         return id;
     }

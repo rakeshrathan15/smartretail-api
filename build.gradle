@@ -26,6 +26,16 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-flyway'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'org.flywaydb:flyway-database-postgresql'
+    implementation 'org.springframework.boot:spring-boot-micrometer-tracing-brave'
+    implementation 'io.micrometer:micrometer-tracing-bridge-brave'
+    implementation 'org.springframework.boot:spring-boot-micrometer-observation'
+    implementation 'org.springframework.boot:spring-boot-starter-micrometer-metrics'
+    implementation 'org.mapstruct:mapstruct:1.6.3'
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+    // Lets MapStruct see getters that Lombok generates; must sit between the two processors.
+    annotationProcessor 'org.projectlombok:lombok-mapstruct-binding:0.2.0'
+    annotationProcessor 'org.mapstruct:mapstruct-processor:1.6.3'
     runtimeOnly 'org.postgresql:postgresql'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'

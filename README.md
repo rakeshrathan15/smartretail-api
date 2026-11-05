@@ -47,7 +47,14 @@ Mobile numbers are stored as 10 digits, so `+91 98765 43210`, `09876543210` and 
 Route rules (`security/SecurityConfig.java`): `/api/admin/**` needs ADMIN, `/api/pos/**` needs CASHIER or ADMIN,
 `GET` on `/api/products|categories|banners/**` and `/api/settings/public` is public, everything else needs a login.
 
-Errors are returned as RFC 9457 problem details; validation errors include an `errors` map by field.
+Every JSON response has the same shape (`common/response/ApiResponse`):
+
+```json
+{"success": true, "data": {"id": "..."}, "timestamp": "2026-10-31T10:00:00Z"}
+{"success": false, "error": {"code": "ORDER_NOT_FOUND", "message": "Order not found", "requestId": "..."}, "timestamp": "2026-10-31T10:00:00Z"}
+```
+
+`error.code` is a stable key from `common/exception/ErrorCode`, for clients to branch on; `error.message` is safe to show the user. Validation errors add `error.details`, a map by field. Deletes and logout return 204 with no body; a payment screenshot is returned as the image itself.
 
 ## Catalog API
 
@@ -140,7 +147,9 @@ checks the screenshot; CREDIT → `payment_terms = CREDIT`. Order numbers are `S
 ## Production safeguards
 
 - **Layers**: controllers only handle HTTP, services hold the rules and transactions, and `*Directory` classes are read-only SQL views for admin screens.
-- **Errors**: unexpected failures are logged and return a plain message without internal details; a database rule refusing a change returns 409.
+- **Errors**: unexpected failures are logged and return a plain message without internal details; a database rule refusing a change returns 409 `DATA_INTEGRITY_VIOLATION`. 401 and 403 from the security filters use the same JSON shape.
+- **Logs**: outside dev, one Logstash-format JSON object per line, with `traceId`, `spanId` and `requestId`. Every request logs one line and returns `X-Request-Id`, and the same id is in `error.requestId`. Orders, payments, stock changes and sign-ins log business events by id; passwords, tokens, phone numbers and email addresses are not logged.
+- **Tracing and metrics**: trace ids are created for every request but are not sent anywhere until a tracing backend is added. `/actuator/metrics` needs a login.
 - **Login**: 10 wrong passwords for one account blocks it for 15 minutes (`LoginAttempts`). The count is kept in memory, so move it to a shared store before running more than one server.
 - **Operations**: graceful shutdown; `/actuator/health/liveness` and `/readiness` for the hosting platform.
 
@@ -163,13 +172,27 @@ How it fits together:
 
 ## Layout
 
+Each feature has the same folders; a feature only has the ones it needs.
+
 ```
 com.smartretail
-├── auth       register/login/refresh/logout, tokens, bootstrap admin
-├── user       User, Role, Profile
-├── security   Spring Security, JWT encoder/decoder, CORS
-└── common     ApiException and error handler
+├── <feature>            address, auth, catalog, coupon, customer, expense, inventory, order,
+│   │                    picklist, route, settings, shop, store, supplier, user
+│   ├── controller       HTTP only: reads the request, calls a service, wraps the result
+│   ├── service          Business rules and transactions
+│   ├── repository       Spring Data repositories, and read-only *Directory SQL for admin screens
+│   ├── entity           JPA entities
+│   ├── dto/request      Request bodies, with validation rules
+│   ├── dto/response     Response bodies
+│   ├── mapper           MapStruct mappers: entity to response
+│   ├── enums, event     Shared enums and application events
+│   └── support          Pure helpers, such as pricing, filters and zone maths
+├── common
+│   ├── exception        ErrorCode, ApiException, the central error handler
+│   ├── response         ApiResponse, ApiError, PageResponse
+│   ├── mapper           Shared MapStruct settings
+│   ├── web              Request id and request logging
+│   └── util             Money, dates, search terms
+├── security             Spring Security, JWT encoder/decoder, CORS, JSON 401/403
+└── storage              File storage
 ```
-
-The full schema (catalog, orders, routes, credit ledger, inventory, POS, settings) is already in
-`V1__init_schema.sql`; feature packages for those come next.

@@ -3,7 +3,8 @@ package com.smartretail.auth;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.smartretail.common.ApiException;
+import com.smartretail.auth.support.LoginAttempts;
+import com.smartretail.common.exception.ApiException;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
